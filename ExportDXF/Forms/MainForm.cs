@@ -217,10 +217,9 @@ namespace ExportDXF.Forms
             if (dir == null)
                 return;
 
-            var name = model.ConfigurationManager.ActiveConfiguration.Name.ToLower() == "default" ?
-                model.GetTitle() :
-                string.Format("{0} [{1}]", model.GetTitle(), model.ConfigurationManager.ActiveConfiguration.Name);
-
+            var title = model.GetTitle().Replace(".SLDPRT", "");
+            var config = model.ConfigurationManager.ActiveConfiguration.Name;
+            var name = config.ToLower() == "default" ? title : string.Format("{0} [{1}]", title, config);
             var savePath = Path.Combine(dir, prefix + name + ".dxf");
 
             SavePartToDXF(part, savePath);
