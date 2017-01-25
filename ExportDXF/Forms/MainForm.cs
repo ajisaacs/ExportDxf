@@ -70,6 +70,7 @@ namespace ExportDXF.Forms
         {
             timeStarted = DateTime.Now;
 
+            sldWorks.UserControl = false;
             sldWorks.ActiveModelDocChangeNotify -= SldWorks_ActiveModelDocChangeNotify;
 
             Invoke(new MethodInvoker(() =>
@@ -86,6 +87,7 @@ namespace ExportDXF.Forms
 
             DetermineModelTypeAndExportToDXF(model);
 
+            sldWorks.UserControl = true;
         }
 
         private void Worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
