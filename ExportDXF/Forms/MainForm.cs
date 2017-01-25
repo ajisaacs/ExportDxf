@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ExportDXF.Forms
@@ -29,14 +30,50 @@ namespace ExportDXF.Forms
             worker.RunWorkerCompleted += Worker_RunWorkerCompleted;
         }
 
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            button1.Enabled = false;
+
+            var task = new Task(ConnectToSolidWorks);
+
+            task.ContinueWith((t) =>
+            {
+                Invoke(new MethodInvoker(() =>
+                {
+                    SetActiveDocName();
+                    button1.Enabled = true;
+                }));
+            });
+
+            task.Start();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (worker.IsBusy)
+            {
+                worker.CancelAsync();
+                return;
+            }
+
+            worker.RunWorkerAsync();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
+        }
+
         private void Worker_DoWork(object sender, DoWorkEventArgs e)
         {
             timeStarted = DateTime.Now;
-            
+
+            sldWorks.ActiveModelDocChangeNotify -= SldWorks_ActiveModelDocChangeNotify;
+
             Invoke(new MethodInvoker(() =>
             {
-                sldWorks.ActiveModelDocChangeNotify -= SldWorks_ActiveModelDocChangeNotify;
-
                 button1.Image = Properties.Resources.stop_alt;
 
                 if (richTextBox1.TextLength != 0)
@@ -47,7 +84,8 @@ namespace ExportDXF.Forms
 
             Print("Started at " + DateTime.Now.ToShortTimeString());
 
-            CreateDXFTemplates(model);
+            DetermineModelTypeAndExportToDXF(model);
+
         }
 
         private void Worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -77,42 +115,15 @@ namespace ExportDXF.Forms
             {
                 Invoke(new MethodInvoker(() =>
                 {
-                    SetCurrentDocName();
+                    SetActiveDocName();
                 }));
             }
             else
             {
-                SetCurrentDocName();
+                SetActiveDocName();
             }
 
             return 1;
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            base.OnLoad(e);
-
-            new Thread(new ThreadStart(() =>
-            {
-                Invoke(new MethodInvoker(() =>
-                {
-                    Enabled = false;
-                    sldWorks = Activator.CreateInstance(Type.GetTypeFromProgID("SldWorks.Application")) as SldWorks;
-
-                    if (sldWorks == null)
-                    {
-                        MessageBox.Show("Failed to connect to SolidWorks.");
-                        Application.Exit();
-                        return;
-                    }
-
-                    sldWorks.Visible = true;
-                    sldWorks.ActiveModelDocChangeNotify += SldWorks_ActiveModelDocChangeNotify;
-                    SetCurrentDocName();
-                    Enabled = true;
-                }));
-            }))
-            .Start();
         }
 
         private void Print(string s)
@@ -133,25 +144,32 @@ namespace ExportDXF.Forms
             }));
         }
 
-        private void SetCurrentDocName()
+        private void ConnectToSolidWorks()
+        {
+            Print("Connecting to SolidWorks, this may take a minute...");
+            sldWorks = Activator.CreateInstance(Type.GetTypeFromProgID("SldWorks.Application")) as SldWorks;
+
+            if (sldWorks == null)
+            {
+                MessageBox.Show("Failed to connect to SolidWorks.");
+                Application.Exit();
+                return;
+            }
+
+            sldWorks.Visible = true;
+            sldWorks.ActiveModelDocChangeNotify += SldWorks_ActiveModelDocChangeNotify;
+
+            Print("Ready", Color.Green);
+        }
+
+        private void SetActiveDocName()
         {
             var model = sldWorks.ActiveDoc as ModelDoc2;
 
             textBox1.Text = model != null ? model.GetTitle() : "<No Document Open>";
         }
 
-        private void button1_Click(object sender, EventArgs e)
-        {
-            if (worker.IsBusy)
-            {
-                worker.CancelAsync();
-                return;
-            }
-
-            worker.RunWorkerAsync();
-        }
-
-        private void CreateDXFTemplates(ModelDoc2 model)
+        private void DetermineModelTypeAndExportToDXF(ModelDoc2 model)
         {
             if (model is PartDoc)
             {
@@ -206,7 +224,7 @@ namespace ExportDXF.Forms
         {
             var prefix = textBox2.Text;
             var model = part as ModelDoc2;
-            var dir = GetSaveDir();
+            var dir = UserSelectFolder();
 
             if (dir == null)
             {
@@ -239,7 +257,7 @@ namespace ExportDXF.Forms
 
         private void ExportToDXF(IEnumerable<Item> items)
         {
-            var savePath = GetSaveDir();
+            var savePath = UserSelectFolder();
             var prefix = textBox2.Text;
 
             if (savePath == null)
@@ -328,7 +346,7 @@ namespace ExportDXF.Forms
             }
         }
 
-        private string GetSaveDir()
+        private string UserSelectFolder()
         {
             string path = null;
 
@@ -377,11 +395,6 @@ namespace ExportDXF.Forms
                 return !leftMost.GetText().Contains("UP");
 
             return dnCount > upCount;
-        }
-
-        private string DrawingTemplatePath
-        {
-            get { return Path.Combine(Application.StartupPath, "Templates", "Blank.drwdot"); }
         }
 
         private DrawingDoc CreateDrawing()
@@ -498,9 +511,9 @@ namespace ExportDXF.Forms
             return list;
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private static string DrawingTemplatePath
         {
-
+            get { return Path.Combine(Application.StartupPath, "Templates", "Blank.drwdot"); }
         }
     }
 
