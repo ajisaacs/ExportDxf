@@ -269,56 +269,6 @@ namespace ExportDXF.Forms
             }
         }
 
-        private static int? FindItemNumberColumn(TableAnnotation table)
-        {
-            try
-            {
-                if (table.RowCount == 0 || table.ColumnCount == 0)
-                    return null;
-
-                var consecutiveNumberCountPerColumn = new int[table.ColumnCount];
-
-                for (int columnIndex = 0; columnIndex < table.ColumnCount; ++columnIndex)
-                {
-                    for (int rowIndex = 0; rowIndex < table.RowCount - 1; ++rowIndex)
-                    {
-                        var currentRowValue = table.Text[rowIndex, columnIndex];
-                        var nextRowValue = table.Text[rowIndex + 1, columnIndex];
-
-                        int currentRowNum;
-                        int nextRowNum;
-
-                        if (currentRowValue == null || !int.TryParse(currentRowValue, out currentRowNum))
-                            continue; // because currentRowValue is not a number
-
-                        if (nextRowValue == null || !int.TryParse(nextRowValue, out nextRowNum))
-                            continue; // because nextRowValue is not a number
-
-                        if (currentRowNum == (nextRowNum - 1))
-                            consecutiveNumberCountPerColumn[columnIndex]++;
-                    }
-                }
-
-                int index = 0;
-                int max = consecutiveNumberCountPerColumn[0];
-
-                for (int i = 1; i < consecutiveNumberCountPerColumn.Length; ++i)
-                {
-                    if (consecutiveNumberCountPerColumn[i] > max)
-                    {
-                        index = i;
-                        max = consecutiveNumberCountPerColumn[i];
-                    }
-                }
-
-                return index;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
         private bool SavePartToDXF(PartDoc part, string savePath)
         {
             var partModel = part as ModelDoc2;
@@ -459,16 +409,16 @@ namespace ExportDXF.Forms
 
             var table = bom as TableAnnotation;
 
-            var itemNumColumnFound = FindItemNumberColumn(bom as TableAnnotation);
+            var itemNoColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_ItemNumber);
 
-            if (itemNumColumnFound == null)
+            if (itemNoColumnIndex == -1)
             {
                 Print("Error: Item number column not found.");
                 return null;
             }
             else
             {
-                Print("Item numbers are in the " + Helper.GetNumWithSuffix(itemNumColumnFound.Value + 1) + " column.");
+                Print("Item numbers are in the " + Helper.GetNumWithSuffix(itemNoColumnIndex + 1) + " column.");
             }
 
             var isBOMPartsOnly = bom.BomFeature.TableType == (int)swBomType_e.swBomType_PartsOnly;
@@ -489,7 +439,7 @@ namespace ExportDXF.Forms
                     .GroupBy(c => c.ReferencedConfiguration)
                     .Select(group => group.First());
 
-                var itemNumber = table.Text[rowIndex, itemNumColumnFound.Value].PadLeft(2, '0');
+                var itemNumber = table.Text[rowIndex, itemNoColumnIndex].PadLeft(2, '0');
                 var rev = 'A';
 
                 if (distinctComponents.Count() > 1)
@@ -673,6 +623,34 @@ namespace ExportDXF.Forms
                 case 3: return i.ToString() + "rd";
                 default: return i.ToString() + "th";
             }
+        }
+
+        public static int IndexOfColumnType(this TableAnnotation table, swTableColumnTypes_e columnType)
+        {
+            for (int columnIndex = 0; columnIndex < table.ColumnCount; ++columnIndex)
+            {
+                var currentColumnType = (swTableColumnTypes_e)table.GetColumnType(columnIndex);
+
+                if (currentColumnType == columnType)
+                    return columnIndex;
+            }
+
+            return -1;
+        }
+
+        public static int IndexOfColumnTitle(this TableAnnotation table, string columnTitle)
+        {
+            var lowercaseColumnTitle = columnTitle.ToLower();
+
+            for (int columnIndex = 0; columnIndex < table.ColumnCount; ++columnIndex)
+            {
+                var currentColumnType = table.GetColumnTitle(columnIndex);
+
+                if (currentColumnType.ToLower() == lowercaseColumnTitle)
+                    return columnIndex;
+            }
+
+            return -1;
         }
     }
 
