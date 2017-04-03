@@ -19,6 +19,7 @@ namespace ExportDXF.Forms
         private BackgroundWorker worker;
         private DrawingDoc templateDrawing;
         private DateTime timeStarted;
+        private IViewFlipDecider viewFlipDecider;
 
         public MainForm()
         {
@@ -28,6 +29,8 @@ namespace ExportDXF.Forms
             worker.WorkerSupportsCancellation = true;
             worker.DoWork += Worker_DoWork;
             worker.RunWorkerCompleted += Worker_RunWorkerCompleted;
+
+            viewFlipDecider = new ViewFlipDecider();
         }
 
         protected override void OnLoad(EventArgs e)
@@ -365,38 +368,7 @@ namespace ExportDXF.Forms
 
         private bool ShouldFlipView(SolidWorks.Interop.sldworks.View view)
         {
-            var notes = (view.GetNotes() as Array)?.Cast<Note>();
-
-            var upCount = 0;
-            var dnCount = 0;
-
-            Note leftMost = null;
-            double leftMostValue = double.MaxValue;
-
-            foreach (var note in notes)
-            {
-                var pt = (note.GetTextPoint() as double[]);
-
-                if (pt[0] < leftMostValue)
-                {
-                    leftMostValue = pt[0];
-                    leftMost = note;
-                }
-
-                var txt = note.GetText();
-
-                if (txt.ToUpper().Contains("UP"))
-                    upCount++;
-                else
-                    dnCount++;
-            }
-
-            Print(string.Format("Found {0} bends,  {1} UP,  {2} DOWN", notes.Count(), upCount, dnCount), Color.Blue);
-
-            if (dnCount == upCount && leftMost != null)
-                return !leftMost.GetText().Contains("UP");
-
-            return dnCount > upCount;
+            return viewFlipDecider.ShouldFlip(view);
         }
 
         private DrawingDoc CreateDrawing()
@@ -676,5 +648,173 @@ namespace ExportDXF.Forms
         public int Quantity { get; set; }
 
         public Component2 Component { get; set; }
+    }
+
+    public interface IViewFlipDecider
+    {
+        bool ShouldFlip(SolidWorks.Interop.sldworks.View view);
+    }
+
+    public class ViewFlipDecider : IViewFlipDecider
+    {
+        public bool ShouldFlip(SolidWorks.Interop.sldworks.View view)
+        {
+            var orientation = GetOrientation(view);
+
+            Note note;
+
+            switch (orientation)
+            {
+                case BendOrientation.Horizontal:
+                    note = GetBottomMostNote(view);
+                    break;
+
+                case BendOrientation.Vertical:
+                    note = GetLeftMostNote(view);
+                    break;
+
+                default:
+                    return false;
+            }
+
+            var bendDir = GetBendDirection(note);
+            var shouldFlip = bendDir == BendDirection.Down;
+
+            return shouldFlip;
+        }
+
+        private static BendDirection GetBendDirection(Note note)
+        {
+            var txt = note.GetText();
+
+            return txt.ToUpper().Contains("UP") ? BendDirection.Up : BendDirection.Down;
+        }
+
+        private static IEnumerable<Note> GetBendNotes(SolidWorks.Interop.sldworks.View view)
+        {
+            return (view.GetNotes() as Array)?.Cast<Note>();
+        }
+
+        private static Note GetLeftMostNote(SolidWorks.Interop.sldworks.View view)
+        {
+            var notes = GetBendNotes(view);
+
+            Note leftMostNote = null;
+            var leftMostValue = double.MaxValue;
+
+            foreach (var note in notes)
+            {
+                var pt = (note.GetTextPoint() as double[]);
+                var x = pt[0];
+
+                if (x < leftMostValue)
+                {
+                    leftMostValue = x;
+                    leftMostNote = note;
+                }
+            }
+
+            return leftMostNote;
+        }
+
+        private static Note GetBottomMostNote(SolidWorks.Interop.sldworks.View view)
+        {
+            var notes = GetBendNotes(view);
+
+            Note btmMostNote = null;
+            var btmMostValue = double.MaxValue;
+
+            foreach (var note in notes)
+            {
+                var pt = (note.GetTextPoint() as double[]);
+                var y = pt[1];
+
+                if (y < btmMostValue)
+                {
+                    btmMostValue = y;
+                    btmMostNote = note;
+                }
+            }
+
+            return btmMostNote;
+        }
+
+        private static IEnumerable<double> GetBendAngles(SolidWorks.Interop.sldworks.View view)
+        {
+            var angles = new List<double>();
+            var notes = GetBendNotes(view);
+
+            foreach (var note in notes)
+            {
+                var angle = RadiansToDegrees(note.Angle);
+                angles.Add(angle);
+            }
+
+            return angles;
+        }
+
+        private static BendOrientation GetOrientation(SolidWorks.Interop.sldworks.View view)
+        {
+            var angles = GetBendAngles(view);
+
+            var vertical = 0;
+            var horizontal = 0;
+
+            foreach (var angle in angles)
+            {
+                var o = GetAngleOrientation(angle);
+
+                switch (o)
+                {
+                    case BendOrientation.Horizontal:
+                        horizontal++;
+                        break;
+
+                    case BendOrientation.Vertical:
+                        vertical++;
+                        break;
+                }
+            }
+
+            if (vertical == 0 && horizontal == 0)
+                return BendOrientation.Unknown;
+
+            return vertical > horizontal ? BendOrientation.Vertical : BendOrientation.Horizontal;
+        }
+
+        private static BendOrientation GetAngleOrientation(double angleInDegrees)
+        {
+            if (angleInDegrees < 10 || angleInDegrees > 350)
+                return BendOrientation.Horizontal;
+
+            if (angleInDegrees > 170 && angleInDegrees < 190)
+                return BendOrientation.Horizontal;
+
+            if (angleInDegrees > 80 && angleInDegrees < 100)
+                return BendOrientation.Vertical;
+
+            if (angleInDegrees > 260 && angleInDegrees < 280)
+                return BendOrientation.Vertical;
+
+            return BendOrientation.Unknown;
+        }
+
+        private static double RadiansToDegrees(double angleInRadians)
+        {
+            return angleInRadians * 180.0 / Math.PI;
+        }
+    }
+
+    enum BendDirection
+    {
+        Up,
+        Down
+    }
+
+    enum BendOrientation
+    {
+        Vertical,
+        Horizontal,
+        Unknown
     }
 }
