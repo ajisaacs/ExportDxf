@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -318,7 +319,6 @@ namespace ExportDXF.Forms
                 var sheet = templateDrawing.IGetCurrentSheet();
                 var modelName = Path.GetFileNameWithoutExtension(partModel.GetPathName());
                 sheet.SetName(modelName);
-
                 
                 Print(partModel.GetTitle() + " - Creating flat pattern.");
                 SolidWorks.Interop.sldworks.View view;
@@ -660,30 +660,147 @@ namespace ExportDXF.Forms
         public bool ShouldFlip(SolidWorks.Interop.sldworks.View view)
         {
             var orientation = GetOrientation(view);
+			var bounds = GetBounds(view);
+			var bends = GetBends(view);
 
-            Note note;
+			var up = bends.Where(b => b.Direction == BendDirection.Up).ToList();
+			var down = bends.Where(b => b.Direction == BendDirection.Down).ToList();
 
-            switch (orientation)
-            {
-                case BendOrientation.Horizontal:
-                    note = GetBottomMostNote(view);
-                    break;
+			if (down.Count == 0)
+				return false;
 
-                case BendOrientation.Vertical:
-                    note = GetLeftMostNote(view);
-                    break;
+			if (up.Count == 0)
+				return true;
 
-                default:
-                    return false;
-            }
+			if (down.Count == up.Count)
+			{
+				var hBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Horizontal).ToList();
+				var vBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Vertical).ToList();
 
-            var bendDir = GetBendDirection(note);
-            var shouldFlip = bendDir == BendDirection.Down;
+				if (hBends.Count == vBends.Count)
+				{
+					var r1 = bounds.Width / hBends.Count;
+					var r2 = bounds.Height / vBends.Count;
 
-            return shouldFlip;
+					return r2 > r1;
+				}
+				else if (hBends.Count > vBends.Count)
+				{
+					var x = SmallestYCoordinate(hBends);
+					return x.Direction == BendDirection.Down;
+				}
+				else
+				{
+					var x = SmallestXCoordinate(vBends);
+					return x.Direction == BendDirection.Down;
+				}
+			}
+
+			return down.Count > up.Count;
         }
 
-        private static BendDirection GetBendDirection(Note note)
+		private static Bounds GetBounds(SolidWorks.Interop.sldworks.View view)
+		{
+			var outline = view.GetOutline() as double[];
+
+			var minX = outline[0] / 0.0254;
+			var minY = outline[1] / 0.0254;
+			var maxX = outline[2] / 0.0254;
+			var maxY = outline[3] / 0.0254;
+
+			var width = Math.Abs(minX) + Math.Abs(maxX);
+			var height = Math.Abs(minY) + Math.Abs(maxY);
+
+			return new Bounds
+			{
+				X = minX,
+				Y = minY,
+				Width = width,
+				Height = height
+			};
+		}
+
+		private static Bend ClosestToBounds(Bounds bounds, IList<Bend> bends)
+		{
+			var hBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Horizontal).ToList();
+			var vBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Vertical).ToList();
+
+			Bend minHBend = null;
+			double minHBendDist = double.MaxValue;
+
+			foreach (var bend in hBends)
+			{
+				double distFromLft = Math.Abs(bend.X - bounds.Left);
+				double distFromRgt = Math.Abs(bounds.Right - bend.X);
+
+				double minDist = Math.Min(distFromLft, distFromRgt);
+
+				if (minDist < minHBendDist)
+				{
+					minHBendDist = minDist;
+					minHBend = bend;
+				}
+			}
+
+			Bend minVBend = null;
+			double minVBendDist = double.MaxValue;
+
+			foreach (var bend in hBends)
+			{
+				double distFromBtm = Math.Abs(bend.Y - bounds.Bottom);
+				double distFromTop = Math.Abs(bounds.Top - bend.Y);
+
+				double minDist = Math.Min(distFromBtm, distFromTop);
+
+				if (minDist < minHBendDist)
+				{
+					minVBendDist = minDist;
+					minVBend = bend;
+				}
+			}
+
+			return minVBendDist < minHBendDist ? minVBend : minHBend;
+		}
+
+		private static Bend SmallestYCoordinate(IList<Bend> bends)
+		{
+			double dist = double.MaxValue;
+			int index = -1;
+
+			for (int i = 0; i < bends.Count; i++)
+			{
+				var bend = bends[i];
+
+				if (bend.Y < dist)
+				{
+					dist = bend.Y;
+					index = i;
+				}
+			}
+
+			return index == -1 ? null : bends[index];
+		}
+
+		private static Bend SmallestXCoordinate(IList<Bend> bends)
+		{
+			double dist = double.MaxValue;
+			int index = -1;
+
+			for (int i = 0; i < bends.Count; i++)
+			{
+				var bend = bends[i];
+
+				if (bend.X < dist)
+				{
+					dist = bend.Y;
+					index = i;
+				}
+			}
+
+			return index == -1 ? null : bends[index];
+		}
+
+		private static BendDirection GetBendDirection(Note note)
         {
             var txt = note.GetText();
 
@@ -744,7 +861,7 @@ namespace ExportDXF.Forms
             var angles = new List<double>();
             var notes = GetBendNotes(view);
 
-            foreach (var note in notes)
+			foreach (var note in notes)
             {
                 var angle = RadiansToDegrees(note.Angle);
                 angles.Add(angle);
@@ -753,9 +870,49 @@ namespace ExportDXF.Forms
             return angles;
         }
 
-        private static BendOrientation GetOrientation(SolidWorks.Interop.sldworks.View view)
+		private static List<Bend> GetBends(SolidWorks.Interop.sldworks.View view)
+		{
+			var bends = new List<Bend>();
+			var notes = GetBendNotes(view);
+
+			const string pattern = @"(?<DIRECTION>(UP|DOWN))\s*(?<ANGLE>(\d+))°";
+
+			foreach (var note in notes)
+			{
+				var pos = note.GetTextPoint2() as double[];
+
+				var x = pos[0] / 0.0254;
+				var y = pos[1] / 0.0254;
+
+				var text = note.GetText();
+				var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+
+				if (!match.Success)
+					continue;
+
+				var angle = double.Parse(match.Groups["ANGLE"].Value);
+				var direection = match.Groups["DIRECTION"].Value;
+
+				var bend = new Bend
+				{
+					ParallelBendAngle = RadiansToDegrees(note.Angle),
+					Angle = angle,
+					Direction = direection == "UP" ? BendDirection.Up : BendDirection.Down,
+					X = x,
+					Y = y
+				};
+
+				bends.Add(bend);
+			}
+
+			return bends;
+		}
+
+		private static BendOrientation GetOrientation(SolidWorks.Interop.sldworks.View view)
         {
             var angles = GetBendAngles(view);
+
+			var bends = GetBends(view);
 
             var vertical = 0;
             var horizontal = 0;
@@ -801,9 +958,21 @@ namespace ExportDXF.Forms
 
         private static double RadiansToDegrees(double angleInRadians)
         {
-            return angleInRadians * 180.0 / Math.PI;
+            return Math.Round(angleInRadians * 180.0 / Math.PI, 8);
         }
     }
+
+	class Bend
+	{
+		public BendDirection Direction { get; set; }
+
+		public double ParallelBendAngle { get; set; }
+
+		public double Angle { get; set; }
+
+		public double X { get; set; }
+		public double Y { get; set; }
+	}
 
     enum BendDirection
     {
@@ -817,4 +986,38 @@ namespace ExportDXF.Forms
         Horizontal,
         Unknown
     }
+
+	class Size
+	{
+		public double Width { get; set; }
+		public double Height { get; set; }
+	}
+
+	class Bounds
+	{
+		public double X { get; set; }
+		public double Y { get; set; }
+		public double Width { get; set; }
+		public double Height { get; set; }
+
+		public double Left
+		{
+			get { return X; }
+		}
+
+		public double Right
+		{
+			get { return X + Width; }
+		}
+
+		public double Bottom
+		{
+			get { return Y; }
+		}
+
+		public double Top
+		{
+			get { return Y + Height; }
+		}
+	}
 }
