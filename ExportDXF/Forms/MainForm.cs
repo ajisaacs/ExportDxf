@@ -672,32 +672,10 @@ namespace ExportDXF.Forms
 			if (up.Count == 0)
 				return true;
 
-			if (down.Count == up.Count)
-			{
-				var hBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Horizontal).ToList();
-				var vBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Vertical).ToList();
+			var bend = ClosestToBounds(bounds, bends);
 
-				if (hBends.Count == vBends.Count)
-				{
-					var r1 = bounds.Width / hBends.Count;
-					var r2 = bounds.Height / vBends.Count;
-
-					return r2 > r1;
-				}
-				else if (hBends.Count > vBends.Count)
-				{
-					var x = SmallestYCoordinate(hBends);
-					return x.Direction == BendDirection.Down;
-				}
-				else
-				{
-					var x = SmallestXCoordinate(vBends);
-					return x.Direction == BendDirection.Down;
-				}
-			}
-
-			return down.Count > up.Count;
-        }
+			return bend.Direction == BendDirection.Down;
+		}
 
 		private static Bounds GetBounds(SolidWorks.Interop.sldworks.View view)
 		{
@@ -725,25 +703,25 @@ namespace ExportDXF.Forms
 			var hBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Horizontal).ToList();
 			var vBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Vertical).ToList();
 
-			Bend minHBend = null;
-			double minHBendDist = double.MaxValue;
+			Bend minVBend = null;
+			double minVBendDist = double.MaxValue;
 
-			foreach (var bend in hBends)
+			foreach (var bend in vBends)
 			{
 				double distFromLft = Math.Abs(bend.X - bounds.Left);
 				double distFromRgt = Math.Abs(bounds.Right - bend.X);
 
 				double minDist = Math.Min(distFromLft, distFromRgt);
 
-				if (minDist < minHBendDist)
+				if (minDist < minVBendDist)
 				{
-					minHBendDist = minDist;
-					minHBend = bend;
+					minVBendDist = minDist;
+					minVBend = bend;
 				}
 			}
 
-			Bend minVBend = null;
-			double minVBendDist = double.MaxValue;
+			Bend minHBend = null;
+			double minHBendDist = double.MaxValue;
 
 			foreach (var bend in hBends)
 			{
@@ -754,12 +732,12 @@ namespace ExportDXF.Forms
 
 				if (minDist < minHBendDist)
 				{
-					minVBendDist = minDist;
-					minVBend = bend;
+					minHBendDist = minDist;
+					minHBend = bend;
 				}
 			}
 
-			return minVBendDist < minHBendDist ? minVBend : minHBend;
+			return minHBendDist < minVBendDist ? minHBend : minVBend;
 		}
 
 		private static Bend SmallestYCoordinate(IList<Bend> bends)
@@ -792,7 +770,7 @@ namespace ExportDXF.Forms
 
 				if (bend.X < dist)
 				{
-					dist = bend.Y;
+					dist = bend.X;
 					index = i;
 				}
 			}
