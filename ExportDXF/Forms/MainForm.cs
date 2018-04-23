@@ -278,7 +278,7 @@ namespace ExportDXF.Forms
                 if (worker.CancellationPending)
                     break;
 
-                var fileName = prefix + item.Name + ".dxf";
+                var fileName = prefix + item.PartNo + ".dxf";
                 var savepath = Path.Combine(savePath, fileName);
                 var part = item.Component.GetModelDoc2() as PartDoc;
 
@@ -405,7 +405,28 @@ namespace ExportDXF.Forms
                 Print("Item numbers are in the " + Helper.GetNumWithSuffix(itemNoColumnIndex + 1) + " column.");
             }
 
-            var isBOMPartsOnly = bom.BomFeature.TableType == (int)swBomType_e.swBomType_PartsOnly;
+			var qtyColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_Quantity);
+			if (qtyColumnIndex == -1)
+			{
+				Print("Error: Quantity column not found.");
+				return null;
+			}
+
+			var descriptionColumnIndex = table.IndexOfColumnTitle("Description");
+			if (descriptionColumnIndex == -1)
+			{
+				Print("Error: Description column not found.");
+				return null;
+			}
+
+			var partNoColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_PartNumber);
+			if (partNoColumnIndex == -1)
+			{
+				Print("Error: Part number column not found.");
+				return null;
+			}
+
+			var isBOMPartsOnly = bom.BomFeature.TableType == (int)swBomType_e.swBomType_PartsOnly;
 
             for (int rowIndex = 0; rowIndex < table.RowCount; rowIndex++)
             {
@@ -423,25 +444,30 @@ namespace ExportDXF.Forms
                     .GroupBy(c => c.ReferencedConfiguration)
                     .Select(group => group.First());
 
-                var itemNumber = table.Text[rowIndex, itemNoColumnIndex].PadLeft(2, '0');
-                var rev = 'A';
+                //var itemNumber = table.Text[rowIndex, itemNoColumnIndex].PadLeft(2, '0');
+                //var rev = 'A';
 
                 if (distinctComponents.Count() > 1)
                 {
-                    foreach (var comp in distinctComponents)
-                    {
-                        items.Add(new Item
-                        {
-                            Name = itemNumber + rev++,
-                            Component = comp
-                        });
-                    }
+					throw new NotImplementedException();
+
+                    //foreach (var comp in distinctComponents)
+                    //{
+                    //    items.Add(new Item
+                    //    {
+                    //        Name = itemNumber + rev++,
+                    //        Component = comp
+                    //    });
+                    //}
                 }
                 else
                 {
-                    items.Add(new Item
-                    {
-                        Name = itemNumber,
+					items.Add(new Item
+					{
+						PartNo = table.DisplayedText[rowIndex, partNoColumnIndex],
+						Quantity = int.Parse(table.DisplayedText[rowIndex, qtyColumnIndex]),
+						Description = table.DisplayedText[rowIndex, descriptionColumnIndex],
+						ItemNo = table.DisplayedText[rowIndex, itemNoColumnIndex].PadLeft(2, '0'),
                         Component = distinctComponents.First()
                     });
                 }
@@ -473,7 +499,7 @@ namespace ExportDXF.Forms
 
                 list.Add(new Item
                 {
-                    Name = name,
+                    PartNo = name,
                     Quantity = group.Count(),
                     Component = component
                 });
