@@ -232,7 +232,7 @@ namespace ExportDXF.Forms
 
             if (dir == null)
             {
-                Print("Cancelled\n", Color.Red);
+                Print("Canceled\n", Color.Red);
                 return;
             }
 
@@ -289,18 +289,12 @@ namespace ExportDXF.Forms
 				var config = item.Component.ReferencedConfiguration;
 
 				var sheetMetal = model.GetFeatureByTypeName("SheetMetal");
+				var sheetMetalData = sheetMetal?.GetDefinition() as SheetMetalFeatureData;
 
-				if (sheetMetal != null)
+				if (sheetMetalData != null)
 				{
-					var kfactor = sheetMetal.GetDimension("D2")?.GetValue2(config);
-
-					if (kfactor.HasValue)
-						item.KFactor = kfactor.Value;
-
-					var thickness = sheetMetal.GetDimension("Thickness")?.GetValue2(config);
-
-					if (thickness.HasValue)
-						item.Thickness = thickness.Value;
+					item.Thickness = sheetMetalData.Thickness.FromSldWorks();
+					item.KFactor = sheetMetalData.KFactor;
 				}
 
 				var db = string.Empty;
@@ -314,8 +308,15 @@ namespace ExportDXF.Forms
                 Application.DoEvents();
             }
 
-			var bomFile = Path.Combine(savePath, "BOM.xlsx");
-			CreateBOMExcelFile(bomFile, items.ToList());
+			try
+			{
+				var bomFile = Path.Combine(savePath, "BOM.xlsx");
+				CreateBOMExcelFile(bomFile, items.ToList());
+			}
+			catch (Exception ex)
+			{
+				Print(ex.Message, Color.Red);
+			}
 		}
 
 		private string ChangePathExtension(string fullpath, string newExtension)
@@ -503,8 +504,8 @@ namespace ExportDXF.Forms
 
             for (int rowIndex = 0; rowIndex < table.RowCount; rowIndex++)
             {
-                if (table.RowHidden[rowIndex] == true)
-                    continue;
+                //if (table.RowHidden[rowIndex] == true)
+                //    continue;
 
                 var bomComponents = isBOMPartsOnly ?
                     ((Array)bom.GetComponents2(rowIndex, bom.BomFeature.Configuration))?.Cast<Component2>() :

@@ -172,12 +172,12 @@ namespace ExportDXF
 
 		public static double ToSldWorks(this double d)
 		{
-			return d * ScaleFactor;
+			return Math.Round(d * ScaleFactor, 8);
 		}
 
 		public static double FromSldWorks(this double d)
 		{
-			return d / ScaleFactor;
+			return Math.Round(d / ScaleFactor, 8);
 		}
 	}
 }
