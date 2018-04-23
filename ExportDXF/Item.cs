@@ -14,6 +14,8 @@ namespace ExportDXF
 
 		public double Thickness { get; set; }
 
+		public double KFactor { get; set; }
+
 		public string Material { get; set; }
 
 		public Component2 Component { get; set; }

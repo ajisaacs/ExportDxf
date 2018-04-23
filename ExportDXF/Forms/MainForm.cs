@@ -217,10 +217,6 @@ namespace ExportDXF.Forms
 
                 var items = GetItems(bom);
 
-				foreach (var item in items)
-				{
-				}
-
 				Print("Found " + items.Count);
                 Print("");
 
@@ -270,7 +266,7 @@ namespace ExportDXF.Forms
 
 			if (savePath == null)
             {
-                Print("Cancelled\n", Color.Red);
+                Print("Canceled\n", Color.Red);
                 return;
             }
 
@@ -293,12 +289,23 @@ namespace ExportDXF.Forms
 				var config = item.Component.ReferencedConfiguration;
 
 				var sheetMetal = model.GetFeatureByTypeName("SheetMetal");
-				var thickness = sheetMetal.GetDimension("Thickness").GetValue2(config);
-				var db = string.Empty;
-				var material = part.GetMaterialPropertyName2(config, out db);
 
-				item.Thickness = thickness;
-				item.Material = material;
+				if (sheetMetal != null)
+				{
+					var kfactor = sheetMetal.GetDimension("D2")?.GetValue2(config);
+
+					if (kfactor.HasValue)
+						item.KFactor = kfactor.Value;
+
+					var thickness = sheetMetal.GetDimension("Thickness")?.GetValue2(config);
+
+					if (thickness.HasValue)
+						item.Thickness = thickness.Value;
+				}
+
+				var db = string.Empty;
+
+				item.Material = part.GetMaterialPropertyName2(config, out db);
 
 				if (part == null)
                     continue;
@@ -404,6 +411,9 @@ namespace ExportDXF.Forms
 						partsSheet.Cells[row, 5].Value = item.Thickness;
 
 					partsSheet.Cells[row, 6].Value = item.Material;
+
+					if (item.KFactor > 0)
+						partsSheet.Cells[row, 7].Value = item.KFactor;
 				}
 
 				workbook.Calculate();
