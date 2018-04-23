@@ -399,7 +399,10 @@ namespace ExportDXF.Forms
 					partsSheet.Cells[row, 2].Value = item.Quantity;
 					partsSheet.Cells[row, 3].Value = item.Description;
 					partsSheet.Cells[row, 4].Value = item.PartNo;
-					partsSheet.Cells[row, 5].Value = item.Thickness;
+
+					if (item.Thickness > 0)
+						partsSheet.Cells[row, 5].Value = item.Thickness;
+
 					partsSheet.Cells[row, 6].Value = item.Material;
 				}
 
