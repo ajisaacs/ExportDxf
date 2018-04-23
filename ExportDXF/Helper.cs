@@ -156,5 +156,28 @@ namespace ExportDXF
 
             return -1;
         }
-    }
+
+		public static Dimension GetDimension(this Feature feature, string dimName)
+		{
+			return feature?.Parameter(dimName) as Dimension;
+		}
+	}
+
+	public static class Units
+	{
+		/// <summary>
+		/// Multiply factor needed to convert the desired units to meters.
+		/// </summary>
+		public static double ScaleFactor = 0.0254; // inches to meters
+
+		public static double ToSldWorks(this double d)
+		{
+			return d * ScaleFactor;
+		}
+
+		public static double FromSldWorks(this double d)
+		{
+			return d / ScaleFactor;
+		}
+	}
 }

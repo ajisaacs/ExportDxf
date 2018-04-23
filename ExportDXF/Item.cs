@@ -12,6 +12,10 @@ namespace ExportDXF
 
 		public string Description { get; set; }
 
+		public double Thickness { get; set; }
+
+		public string Material { get; set; }
+
 		public Component2 Component { get; set; }
     }
 }

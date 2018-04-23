@@ -1,4 +1,5 @@
-﻿using SolidWorks.Interop.sldworks;
+﻿using OfficeOpenXml;
+using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
@@ -216,7 +217,11 @@ namespace ExportDXF.Forms
 
                 var items = GetItems(bom);
 
-                Print("Found " + items.Count);
+				foreach (var item in items)
+				{
+				}
+
+				Print("Found " + items.Count);
                 Print("");
 
                 ExportToDXF(items);
@@ -261,9 +266,9 @@ namespace ExportDXF.Forms
         private void ExportToDXF(IEnumerable<Item> items)
         {
             var savePath = UserSelectFolder();
-            var prefix = textBox2.Text;
+			var prefix = textBox2.Text;
 
-            if (savePath == null)
+			if (savePath == null)
             {
                 Print("Cancelled\n", Color.Red);
                 return;
@@ -278,17 +283,41 @@ namespace ExportDXF.Forms
                 if (worker.CancellationPending)
                     break;
 
-                var fileName = prefix + item.PartNo + ".dxf";
-                var savepath = Path.Combine(savePath, fileName);
-                var part = item.Component.GetModelDoc2() as PartDoc;
+				item.ItemNo = prefix + item.ItemNo;
 
-                if (part == null)
+				var fileName = item.ItemNo + ".dxf";
+                var savepath = Path.Combine(savePath, fileName);
+				var model = item.Component.GetModelDoc2() as ModelDoc2;
+				var part = model as PartDoc;
+
+				var config = item.Component.ReferencedConfiguration;
+
+				var sheetMetal = model.GetFeatureByTypeName("SheetMetal");
+				var thickness = sheetMetal.GetDimension("Thickness").GetValue2(config);
+				var db = string.Empty;
+				var material = part.GetMaterialPropertyName2(config, out db);
+
+				item.Thickness = thickness;
+				item.Material = material;
+
+				if (part == null)
                     continue;
 
-                SavePartToDXF(part, item.Component.ReferencedConfiguration, savepath);
+                SavePartToDXF(part, config, savepath);
                 Application.DoEvents();
             }
-        }
+
+			var bomFile = Path.Combine(savePath, "BOM.xlsx");
+			CreateBOMExcelFile(bomFile, items.ToList());
+		}
+
+		private string ChangePathExtension(string fullpath, string newExtension)
+		{
+			var dir = Path.GetDirectoryName(fullpath);
+			var name = Path.GetFileNameWithoutExtension(fullpath);
+
+			return Path.Combine(dir, name + newExtension);
+		}
 
         private bool SavePartToDXF(PartDoc part, string savePath)
         {
@@ -348,6 +377,37 @@ namespace ExportDXF.Forms
             }
         }
 
+		private void CreateBOMExcelFile(string filepath, IList<Item> items)
+		{
+			var templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates", "BomTemplate.xlsx");
+
+			File.Copy(templatePath, filepath, true);
+
+			var newFile = new FileInfo(filepath);
+
+			using (var pkg = new ExcelPackage(newFile))
+			{
+				var workbook = pkg.Workbook;
+				var partsSheet = workbook.Worksheets["Parts"];
+
+				for (int i = 0; i < items.Count; i++)
+				{
+					var item = items[i];
+					var row = i + 2;
+
+					partsSheet.Cells[row, 1].Value = item.ItemNo;
+					partsSheet.Cells[row, 2].Value = item.Quantity;
+					partsSheet.Cells[row, 3].Value = item.Description;
+					partsSheet.Cells[row, 4].Value = item.PartNo;
+					partsSheet.Cells[row, 5].Value = item.Thickness;
+					partsSheet.Cells[row, 6].Value = item.Material;
+				}
+
+				workbook.Calculate();
+				pkg.Save();
+			}
+		}
+
         private string UserSelectFolder()
         {
             string path = null;
@@ -363,7 +423,7 @@ namespace ExportDXF.Forms
             return path;
         }
 
-        private bool ShouldFlipView(SolidWorks.Interop.sldworks.View view)
+		private bool ShouldFlipView(SolidWorks.Interop.sldworks.View view)
         {
             return viewFlipDecider.ShouldFlip(view);
         }
@@ -513,4 +573,6 @@ namespace ExportDXF.Forms
             get { return Path.Combine(Application.StartupPath, "Templates", "Blank.drwdot"); }
         }
     }
+
+	
 }
