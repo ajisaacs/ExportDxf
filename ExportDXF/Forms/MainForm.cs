@@ -286,6 +286,12 @@ namespace ExportDXF.Forms
 				var model = item.Component.GetModelDoc2() as ModelDoc2;
 				var part = model as PartDoc;
 
+				if (part == null)
+				{
+					Print(model.GetTitle() + " - skipped, not a part document");
+					continue;
+				}
+
 				var config = item.Component.ReferencedConfiguration;
 
 				var sheetMetal = model.GetFeatureByTypeName("SheetMetal");
