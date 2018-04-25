@@ -288,7 +288,7 @@ namespace ExportDXF.Forms
 
 				if (part == null)
 				{
-					Print(model.GetTitle() + " - skipped, not a part document");
+					Print(item.ItemNo + " - skipped, not a part document");
 					continue;
 				}
 
