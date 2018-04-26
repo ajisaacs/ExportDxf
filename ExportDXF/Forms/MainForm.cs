@@ -206,25 +206,25 @@ namespace ExportDXF.Forms
             Print("Found " + bomTables.Count);
             Print("");
 
+			var items = new List<Item>();
+
             foreach (var bom in bomTables)
             {
                 if (worker.CancellationPending)
                     return;
 
                 Print(bom.BomFeature.Name);
-
                 Print("Fetching components...");
-
-                var items = GetItems(bom);
-
 				Print("Found " + items.Count);
-                Print("");
 
-                ExportToDXF(items);
+				items.AddRange(GetItems(bom));
             }
-        }
 
-        private void ExportToDXF(PartDoc part)
+			Print("Found " + items.Count + " total");
+			ExportToDXF(items);
+		}
+
+		private void ExportToDXF(PartDoc part)
         {
             var prefix = textBox2.Text;
             var model = part as ModelDoc2;
@@ -579,6 +579,7 @@ namespace ExportDXF.Forms
 
                 list.Add(new Item
                 {
+					ItemNo = name,
                     PartNo = name,
                     Quantity = group.Count(),
                     Component = component
