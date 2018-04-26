@@ -303,6 +303,12 @@ namespace ExportDXF.Forms
 					item.KFactor = sheetMetalData.KFactor;
 				}
 
+				if (item.Description == null)
+					item.Description = model.Extension.CustomPropertyManager[config].Get("Description");
+
+				if (item.Description == null)
+					item.Description = model.Extension.CustomPropertyManager[""].Get("Description");
+
 				var db = string.Empty;
 
 				item.Material = part.GetMaterialPropertyName2(config, out db);
@@ -573,11 +579,16 @@ namespace ExportDXF.Forms
             {
                 var component = group.First();
 
+				var model = component.GetModelDoc2() as ModelDoc2;
+
+				if (model == null)
+					continue;
+
                 var name = component.ReferencedConfiguration.ToLower() == "default" ?
                     component.GetTitle() :
                     string.Format("{0} [{1}]", component.GetTitle(), component.ReferencedConfiguration);
 
-                list.Add(new Item
+				list.Add(new Item
                 {
 					ItemNo = name,
                     PartNo = name,
