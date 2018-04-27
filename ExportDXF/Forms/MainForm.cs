@@ -169,11 +169,10 @@ namespace ExportDXF.Forms
         private void SetActiveDocName()
         {
             var model = sldWorks.ActiveDoc as ModelDoc2;
+			activeDocTitleBox.Text = model == null ? "<No Document Open>" : model.GetTitle();
+		}
 
-            textBox1.Text = model != null ? model.GetTitle() : "<No Document Open>";
-        }
-
-        private void DetermineModelTypeAndExportToDXF(ModelDoc2 model)
+		private void DetermineModelTypeAndExportToDXF(ModelDoc2 model)
         {
             if (model is PartDoc)
             {
@@ -206,7 +205,7 @@ namespace ExportDXF.Forms
             Print("Found " + bomTables.Count);
             Print("");
 
-			var items = new List<Item>();
+            var items = new List<Item>();
 
             foreach (var bom in bomTables)
             {
@@ -215,18 +214,18 @@ namespace ExportDXF.Forms
 
                 Print(bom.BomFeature.Name);
                 Print("Fetching components...");
-				Print("Found " + items.Count);
+                Print("Found " + items.Count);
 
-				items.AddRange(GetItems(bom));
+                items.AddRange(GetItems(bom));
             }
 
-			Print("Found " + items.Count + " total");
-			ExportToDXF(items);
-		}
+            Print("Found " + items.Count + " total");
+            ExportToDXF(items);
+        }
 
-		private void ExportToDXF(PartDoc part)
+        private void ExportToDXF(PartDoc part)
         {
-            var prefix = textBox2.Text;
+            var prefix = prefixTextBox.Text;
             var model = part as ModelDoc2;
             var dir = UserSelectFolder();
 
@@ -262,9 +261,9 @@ namespace ExportDXF.Forms
         private void ExportToDXF(IEnumerable<Item> items)
         {
             var savePath = UserSelectFolder();
-			var prefix = textBox2.Text;
+            var prefix = prefixTextBox.Text;
 
-			if (savePath == null)
+            if (savePath == null)
             {
                 Print("Canceled\n", Color.Red);
                 return;
@@ -279,65 +278,65 @@ namespace ExportDXF.Forms
                 if (worker.CancellationPending)
                     break;
 
-				item.ItemNo = prefix + item.ItemNo;
+                item.ItemNo = prefix + item.ItemNo;
 
-				var fileName = item.ItemNo + ".dxf";
+                var fileName = item.ItemNo + ".dxf";
                 var savepath = Path.Combine(savePath, fileName);
-				var model = item.Component.GetModelDoc2() as ModelDoc2;
-				var part = model as PartDoc;
+                var model = item.Component.GetModelDoc2() as ModelDoc2;
+                var part = model as PartDoc;
 
-				if (part == null)
-				{
-					Print(item.ItemNo + " - skipped, not a part document");
-					continue;
-				}
+                if (part == null)
+                {
+                    Print(item.ItemNo + " - skipped, not a part document");
+                    continue;
+                }
 
-				var config = item.Component.ReferencedConfiguration;
+                var config = item.Component.ReferencedConfiguration;
 
-				var sheetMetal = model.GetFeatureByTypeName("SheetMetal");
-				var sheetMetalData = sheetMetal?.GetDefinition() as SheetMetalFeatureData;
+                var sheetMetal = model.GetFeatureByTypeName("SheetMetal");
+                var sheetMetalData = sheetMetal?.GetDefinition() as SheetMetalFeatureData;
 
-				if (sheetMetalData != null)
-				{
-					item.Thickness = sheetMetalData.Thickness.FromSldWorks();
-					item.KFactor = sheetMetalData.KFactor;
-				}
+                if (sheetMetalData != null)
+                {
+                    item.Thickness = sheetMetalData.Thickness.FromSldWorks();
+                    item.KFactor = sheetMetalData.KFactor;
+                }
 
-				if (item.Description == null)
-					item.Description = model.Extension.CustomPropertyManager[config].Get("Description");
+                if (item.Description == null)
+                    item.Description = model.Extension.CustomPropertyManager[config].Get("Description");
 
-				if (item.Description == null)
-					item.Description = model.Extension.CustomPropertyManager[""].Get("Description");
+                if (item.Description == null)
+                    item.Description = model.Extension.CustomPropertyManager[""].Get("Description");
 
-				var db = string.Empty;
+                var db = string.Empty;
 
-				item.Material = part.GetMaterialPropertyName2(config, out db);
+                item.Material = part.GetMaterialPropertyName2(config, out db);
 
-				if (part == null)
+                if (part == null)
                     continue;
 
                 SavePartToDXF(part, config, savepath);
                 Application.DoEvents();
             }
 
-			try
-			{
-				var bomFile = Path.Combine(savePath, "BOM.xlsx");
-				CreateBOMExcelFile(bomFile, items.ToList());
-			}
-			catch (Exception ex)
-			{
-				Print(ex.Message, Color.Red);
-			}
-		}
+            try
+            {
+                var bomFile = Path.Combine(savePath, "BOM.xlsx");
+                CreateBOMExcelFile(bomFile, items.ToList());
+            }
+            catch (Exception ex)
+            {
+                Print(ex.Message, Color.Red);
+            }
+        }
 
-		private string ChangePathExtension(string fullpath, string newExtension)
-		{
-			var dir = Path.GetDirectoryName(fullpath);
-			var name = Path.GetFileNameWithoutExtension(fullpath);
+        private string ChangePathExtension(string fullpath, string newExtension)
+        {
+            var dir = Path.GetDirectoryName(fullpath);
+            var name = Path.GetFileNameWithoutExtension(fullpath);
 
-			return Path.Combine(dir, name + newExtension);
-		}
+            return Path.Combine(dir, name + newExtension);
+        }
 
         private bool SavePartToDXF(PartDoc part, string savePath)
         {
@@ -397,42 +396,42 @@ namespace ExportDXF.Forms
             }
         }
 
-		private void CreateBOMExcelFile(string filepath, IList<Item> items)
-		{
-			var templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates", "BomTemplate.xlsx");
+        private void CreateBOMExcelFile(string filepath, IList<Item> items)
+        {
+            var templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates", "BomTemplate.xlsx");
 
-			File.Copy(templatePath, filepath, true);
+            File.Copy(templatePath, filepath, true);
 
-			var newFile = new FileInfo(filepath);
+            var newFile = new FileInfo(filepath);
 
-			using (var pkg = new ExcelPackage(newFile))
-			{
-				var workbook = pkg.Workbook;
-				var partsSheet = workbook.Worksheets["Parts"];
+            using (var pkg = new ExcelPackage(newFile))
+            {
+                var workbook = pkg.Workbook;
+                var partsSheet = workbook.Worksheets["Parts"];
 
-				for (int i = 0; i < items.Count; i++)
-				{
-					var item = items[i];
-					var row = i + 2;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    var row = i + 2;
 
-					partsSheet.Cells[row, 1].Value = item.ItemNo;
-					partsSheet.Cells[row, 2].Value = item.Quantity;
-					partsSheet.Cells[row, 3].Value = item.Description;
-					partsSheet.Cells[row, 4].Value = item.PartNo;
+                    partsSheet.Cells[row, 1].Value = item.ItemNo;
+                    partsSheet.Cells[row, 2].Value = item.Quantity;
+                    partsSheet.Cells[row, 3].Value = item.Description;
+                    partsSheet.Cells[row, 4].Value = item.PartNo;
 
-					if (item.Thickness > 0)
-						partsSheet.Cells[row, 5].Value = item.Thickness;
+                    if (item.Thickness > 0)
+                        partsSheet.Cells[row, 5].Value = item.Thickness;
 
-					partsSheet.Cells[row, 6].Value = item.Material;
+                    partsSheet.Cells[row, 6].Value = item.Material;
 
-					if (item.KFactor > 0)
-						partsSheet.Cells[row, 7].Value = item.KFactor;
-				}
+                    if (item.KFactor > 0)
+                        partsSheet.Cells[row, 7].Value = item.KFactor;
+                }
 
-				workbook.Calculate();
-				pkg.Save();
-			}
-		}
+                workbook.Calculate();
+                pkg.Save();
+            }
+        }
 
         private string UserSelectFolder()
         {
@@ -449,7 +448,7 @@ namespace ExportDXF.Forms
             return path;
         }
 
-		private bool ShouldFlipView(SolidWorks.Interop.sldworks.View view)
+        private bool ShouldFlipView(SolidWorks.Interop.sldworks.View view)
         {
             return viewFlipDecider.ShouldFlip(view);
         }
@@ -491,28 +490,28 @@ namespace ExportDXF.Forms
                 Print("Item numbers are in the " + Helper.GetNumWithSuffix(itemNoColumnIndex + 1) + " column.");
             }
 
-			var qtyColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_Quantity);
-			if (qtyColumnIndex == -1)
-			{
-				Print("Error: Quantity column not found.");
-				return null;
-			}
+            var qtyColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_Quantity);
+            if (qtyColumnIndex == -1)
+            {
+                Print("Error: Quantity column not found.");
+                return null;
+            }
 
-			var descriptionColumnIndex = table.IndexOfColumnTitle("Description");
-			if (descriptionColumnIndex == -1)
-			{
-				Print("Error: Description column not found.");
-				return null;
-			}
+            var descriptionColumnIndex = table.IndexOfColumnTitle("Description");
+            if (descriptionColumnIndex == -1)
+            {
+                Print("Error: Description column not found.");
+                return null;
+            }
 
-			var partNoColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_PartNumber);
-			if (partNoColumnIndex == -1)
-			{
-				Print("Error: Part number column not found.");
-				return null;
-			}
+            var partNoColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_PartNumber);
+            if (partNoColumnIndex == -1)
+            {
+                Print("Error: Part number column not found.");
+                return null;
+            }
 
-			var isBOMPartsOnly = bom.BomFeature.TableType == (int)swBomType_e.swBomType_PartsOnly;
+            var isBOMPartsOnly = bom.BomFeature.TableType == (int)swBomType_e.swBomType_PartsOnly;
 
             for (int rowIndex = 0; rowIndex < table.RowCount; rowIndex++)
             {
@@ -535,7 +534,7 @@ namespace ExportDXF.Forms
 
                 if (distinctComponents.Count() > 1)
                 {
-					throw new NotImplementedException();
+                    throw new NotImplementedException();
 
                     //foreach (var comp in distinctComponents)
                     //{
@@ -548,12 +547,12 @@ namespace ExportDXF.Forms
                 }
                 else
                 {
-					items.Add(new Item
-					{
-						PartNo = table.DisplayedText[rowIndex, partNoColumnIndex],
-						Quantity = int.Parse(table.DisplayedText[rowIndex, qtyColumnIndex]),
-						Description = table.DisplayedText[rowIndex, descriptionColumnIndex],
-						ItemNo = table.DisplayedText[rowIndex, itemNoColumnIndex].PadLeft(2, '0'),
+                    items.Add(new Item
+                    {
+                        PartNo = table.DisplayedText[rowIndex, partNoColumnIndex],
+                        Quantity = int.Parse(table.DisplayedText[rowIndex, qtyColumnIndex]),
+                        Description = table.DisplayedText[rowIndex, descriptionColumnIndex],
+                        ItemNo = table.DisplayedText[rowIndex, itemNoColumnIndex].PadLeft(2, '0'),
                         Component = distinctComponents.First()
                     });
                 }
@@ -579,18 +578,18 @@ namespace ExportDXF.Forms
             {
                 var component = group.First();
 
-				var model = component.GetModelDoc2() as ModelDoc2;
+                var model = component.GetModelDoc2() as ModelDoc2;
 
-				if (model == null)
-					continue;
+                if (model == null)
+                    continue;
 
                 var name = component.ReferencedConfiguration.ToLower() == "default" ?
                     component.GetTitle() :
                     string.Format("{0} [{1}]", component.GetTitle(), component.ReferencedConfiguration);
 
-				list.Add(new Item
+                list.Add(new Item
                 {
-					ItemNo = name,
+                    ItemNo = name,
                     PartNo = name,
                     Quantity = group.Count(),
                     Component = component
@@ -604,7 +603,22 @@ namespace ExportDXF.Forms
         {
             get { return Path.Combine(Application.StartupPath, "Templates", "Blank.drwdot"); }
         }
-    }
 
-	
+		private void textBox1_TextChanged(object sender, EventArgs e)
+		{
+			var model = sldWorks.ActiveDoc as ModelDoc2;
+			var isDrawing = model is DrawingDoc;
+
+			if (!isDrawing)
+				return;
+
+			var drawingInfo = DrawingInfo.Parse(activeDocTitleBox.Text);
+
+			if (drawingInfo == null)
+				return;
+
+			prefixTextBox.Text = string.Format("{0} {1} PT", drawingInfo.JobNo, drawingInfo.DrawingNo);
+			prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
+		}
+	}
 }
