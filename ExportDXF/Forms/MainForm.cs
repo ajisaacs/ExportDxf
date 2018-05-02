@@ -322,7 +322,9 @@ namespace ExportDXF.Forms
 
             try
             {
-                var bomFile = Path.Combine(savePath, "BOM.xlsx");
+				var drawingInfo = DrawingInfo.Parse(prefix);
+				var bomName = drawingInfo != null ? string.Format("{0} {1} BOM", drawingInfo.JobNo, drawingInfo.DrawingNo) : "BOM";
+				var bomFile = Path.Combine(savePath, bomName + ".xlsx");
                 CreateBOMExcelFile(bomFile, items.ToList());
             }
             catch (Exception ex)
