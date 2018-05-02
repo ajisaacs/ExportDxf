@@ -16,6 +16,8 @@ namespace ExportDXF
 
 		public double KFactor { get; set; }
 
+		public double BendRadius { get; set; }
+
 		public string Material { get; set; }
 
 		public Component2 Component { get; set; }

@@ -300,9 +300,10 @@ namespace ExportDXF.Forms
                 {
                     item.Thickness = sheetMetalData.Thickness.FromSldWorks();
                     item.KFactor = sheetMetalData.KFactor;
-                }
+					item.BendRadius = sheetMetalData.BendRadius.FromSldWorks();
+				}
 
-                if (item.Description == null)
+				if (item.Description == null)
                     item.Description = model.Extension.CustomPropertyManager[config].Get("Description");
 
                 if (item.Description == null)
@@ -312,7 +313,7 @@ namespace ExportDXF.Forms
 
                 item.Material = part.GetMaterialPropertyName2(config, out db);
 
-                if (part == null)
+				if (part == null)
                     continue;
 
                 SavePartToDXF(part, config, savepath);
@@ -426,7 +427,12 @@ namespace ExportDXF.Forms
 
                     if (item.KFactor > 0)
                         partsSheet.Cells[row, 7].Value = item.KFactor;
+
+					if (item.BendRadius > 0)
+						partsSheet.Cells[row, 8].Value = item.BendRadius;
                 }
+
+				partsSheet.Column(1).AutoFit();
 
                 workbook.Calculate();
                 pkg.Save();
