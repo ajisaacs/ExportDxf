@@ -29,7 +29,7 @@ namespace ExportDXF.Forms
             worker.DoWork += Worker_DoWork;
             worker.RunWorkerCompleted += Worker_RunWorkerCompleted;
 
-            viewFlipDecider = new ViewFlipDecider();
+            viewFlipDecider = new AskViewFlipDecider();
         }
 
         protected override void OnLoad(EventArgs e)
@@ -627,6 +627,14 @@ namespace ExportDXF.Forms
 
 			prefixTextBox.Text = string.Format("{0} {1} PT", drawingInfo.JobNo, drawingInfo.DrawingNo);
 			prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
+		}
+	}
+
+	public class AskViewFlipDecider : IViewFlipDecider
+	{
+		public bool ShouldFlip(SolidWorks.Interop.sldworks.View view)
+		{
+			return MessageBox.Show("Flip view?", "", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
 		}
 	}
 }
