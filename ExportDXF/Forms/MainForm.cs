@@ -313,10 +313,8 @@ namespace ExportDXF.Forms
                 if (worker.CancellationPending)
                     break;
 
-                item.ItemNo = prefix + item.ItemNo;
-
-                var fileName = item.ItemNo + ".dxf";
-                var savepath = Path.Combine(savePath, fileName);
+                var fileName = GetFileName(item);
+                var savepath = Path.Combine(savePath, fileName + ".dxf");
                 var model = item.Component.GetModelDoc2() as ModelDoc2;
                 var part = model as PartDoc;
 
@@ -351,7 +349,11 @@ namespace ExportDXF.Forms
                 if (part == null)
                     continue;
 
-                SavePartToDXF(part, config, savepath);
+                if (SavePartToDXF(part, config, savepath))
+                {
+                    item.FileName = Path.GetFileNameWithoutExtension(savepath);
+                }
+
                 Application.DoEvents();
             }
 
@@ -365,6 +367,20 @@ namespace ExportDXF.Forms
             catch (Exception ex)
             {
                 Print(ex.Message, Color.Red);
+            }
+        }
+
+        private string GetFileName(Item item)
+        {
+            var prefix = prefixTextBox.Text.Replace("\"", "''");
+
+            if (string.IsNullOrWhiteSpace(item.ItemNo))
+            {
+                return prefix + item.PartName;
+            }
+            else
+            {
+                return prefix + item.ItemNo.PadLeft(2, '0');
             }
         }
 
@@ -451,25 +467,30 @@ namespace ExportDXF.Forms
                 {
                     var item = items[i];
                     var row = i + 2;
+                    var col = 1;
 
-                    partsSheet.Cells[row, 1].Value = item.ItemNo;
-                    partsSheet.Cells[row, 2].Value = item.Quantity;
-                    partsSheet.Cells[row, 3].Value = item.Description;
-                    partsSheet.Cells[row, 4].Value = item.PartNo;
+                    partsSheet.Cells[row, col++].Value = item.ItemNo;
+                    partsSheet.Cells[row, col++].Value = item.FileName;
+                    partsSheet.Cells[row, col++].Value = item.Quantity;
+                    partsSheet.Cells[row, col++].Value = item.Description;
+                    partsSheet.Cells[row, col++].Value = item.PartName;
 
                     if (item.Thickness > 0)
-                        partsSheet.Cells[row, 5].Value = item.Thickness;
+                        partsSheet.Cells[row, col].Value = item.Thickness;
+                    col++;
 
-                    partsSheet.Cells[row, 6].Value = item.Material;
+                    partsSheet.Cells[row, col++].Value = item.Material;
 
                     if (item.KFactor > 0)
-                        partsSheet.Cells[row, 7].Value = item.KFactor;
+                        partsSheet.Cells[row, col].Value = item.KFactor;
+                    col++;
 
                     if (item.BendRadius > 0)
-                        partsSheet.Cells[row, 8].Value = item.BendRadius;
+                        partsSheet.Cells[row, col].Value = item.BendRadius;
+                    col++;
                 }
 
-                partsSheet.Column(1).AutoFit();
+                partsSheet.Column(2).AutoFit();
 
                 workbook.Calculate();
                 pkg.Save();
@@ -583,10 +604,10 @@ namespace ExportDXF.Forms
                 {
                     items.Add(new Item
                     {
-                        PartNo = table.DisplayedText[rowIndex, partNoColumnIndex],
+                        PartName = table.DisplayedText[rowIndex, partNoColumnIndex],
                         Quantity = int.Parse(table.DisplayedText[rowIndex, qtyColumnIndex]),
                         Description = table.DisplayedText[rowIndex, descriptionColumnIndex],
-                        ItemNo = table.DisplayedText[rowIndex, itemNoColumnIndex].PadLeft(2, '0'),
+                        ItemNo = table.DisplayedText[rowIndex, itemNoColumnIndex],
                         Component = distinctComponents.First()
                     });
                 }
@@ -623,8 +644,7 @@ namespace ExportDXF.Forms
 
                 list.Add(new Item
                 {
-                    ItemNo = name,
-                    PartNo = name,
+                    PartName = name,
                     Quantity = group.Count(),
                     Component = component
                 });
