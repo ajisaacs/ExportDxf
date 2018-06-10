@@ -662,9 +662,3 @@ namespace ExportDXF.Forms
         public IViewFlipDecider ViewFlipDecider { get; set; }
     }
 }
-
-
-
-namespace Helpers
-{
-}

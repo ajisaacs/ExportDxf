@@ -1,40 +1,11 @@
 ﻿using SolidWorks.Interop.sldworks;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ExportDXF
 {
-    [DisplayName("Automatic")]
-    public class ViewFlipDecider : IViewFlipDecider
-    {
-        public string Name => "Automatic";
-
-        public bool ShouldFlip(SolidWorks.Interop.sldworks.View view)
-        {
-            var orientation = ViewHelper.GetOrientation(view);
-            var bounds = ViewHelper.GetBounds(view);
-            var bends = ViewHelper.GetBends(view);
-
-            var up = bends.Where(b => b.Direction == BendDirection.Up).ToList();
-            var down = bends.Where(b => b.Direction == BendDirection.Down).ToList();
-
-            if (down.Count == 0)
-                return false;
-
-            if (up.Count == 0)
-                return true;
-
-            var bend = ViewHelper.ClosestToBounds(bounds, bends);
-
-            return bend.Direction == BendDirection.Down;
-        }
-
-
-    }
-
     internal static class ViewHelper
     {
         public static Bounds GetBounds(SolidWorks.Interop.sldworks.View view)

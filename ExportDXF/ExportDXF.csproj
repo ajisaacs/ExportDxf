@@ -88,10 +88,8 @@
     <Compile Include="BendOrientation.cs" />
     <Compile Include="Bounds.cs" />
     <Compile Include="DrawingInfo.cs" />
-    <Compile Include="AskViewFlipDecider.cs" />
     <Compile Include="Item.cs" />
     <Compile Include="IViewFlipDecider.cs" />
-    <Compile Include="ViewFlipDecider.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
@@ -101,6 +99,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ViewHelper.cs" />
     <EmbeddedResource Include="Forms\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
