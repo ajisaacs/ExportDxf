@@ -542,16 +542,7 @@ namespace ExportDXF.Forms
 
                 if (distinctComponents.Count() > 1)
                 {
-                    throw new NotImplementedException();
-
-                    //foreach (var comp in distinctComponents)
-                    //{
-                    //    items.Add(new Item
-                    //    {
-                    //        Name = itemNumber + rev++,
-                    //        Component = comp
-                    //    });
-                    //}
+                    continue;
                 }
                 else
                 {
