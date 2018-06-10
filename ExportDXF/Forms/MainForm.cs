@@ -12,7 +12,7 @@ using System.Windows.Forms;
 
 namespace ExportDXF.Forms
 {
-	public partial class MainForm : Form
+    public partial class MainForm : Form
     {
         private SldWorks sldWorks;
         private BackgroundWorker worker;
@@ -29,7 +29,16 @@ namespace ExportDXF.Forms
             worker.DoWork += Worker_DoWork;
             worker.RunWorkerCompleted += Worker_RunWorkerCompleted;
 
-            viewFlipDecider = new AskViewFlipDecider();
+            var type = typeof(IViewFlipDecider);
+            var types = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(s => s.GetTypes())
+                .Where(p => type.IsAssignableFrom(p) && p.IsClass)
+                .ToList();
+
+            comboBox1.DataSource = GetItems();
+            comboBox1.DisplayMember = "Name";
+
+            //viewFlipDecider = new AskViewFlipDecider();
         }
 
         protected override void OnLoad(EventArgs e)
@@ -50,6 +59,29 @@ namespace ExportDXF.Forms
             });
 
             task.Start();
+        }
+
+        private List<Item2> GetItems()
+        {
+            var types = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(s => s.GetTypes())
+                .Where(p => typeof(IViewFlipDecider).IsAssignableFrom(p) && p.IsClass)
+                .ToList();
+
+            var items = new List<Item2>();
+
+            foreach (var type in types)
+            {
+                var obj = (IViewFlipDecider)Activator.CreateInstance(type);
+
+                items.Add(new Item2
+                {
+                    Name = obj.Name,
+                    ViewFlipDecider = obj
+                });
+            }
+
+            return items;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -77,12 +109,15 @@ namespace ExportDXF.Forms
 
             Invoke(new MethodInvoker(() =>
             {
+                var item = comboBox1.SelectedItem as Item2;
+                viewFlipDecider = item.ViewFlipDecider;
+
                 button1.Image = Properties.Resources.stop_alt;
 
                 if (richTextBox1.TextLength != 0)
                     richTextBox1.AppendText("\n\n");
             }));
-            
+
             var model = sldWorks.ActiveDoc as ModelDoc2;
 
             Print("Started at " + DateTime.Now.ToShortTimeString());
@@ -169,10 +204,10 @@ namespace ExportDXF.Forms
         private void SetActiveDocName()
         {
             var model = sldWorks.ActiveDoc as ModelDoc2;
-			activeDocTitleBox.Text = model == null ? "<No Document Open>" : model.GetTitle();
-		}
+            activeDocTitleBox.Text = model == null ? "<No Document Open>" : model.GetTitle();
+        }
 
-		private void DetermineModelTypeAndExportToDXF(ModelDoc2 model)
+        private void DetermineModelTypeAndExportToDXF(ModelDoc2 model)
         {
             if (model is PartDoc)
             {
@@ -300,10 +335,10 @@ namespace ExportDXF.Forms
                 {
                     item.Thickness = sheetMetalData.Thickness.FromSldWorks();
                     item.KFactor = sheetMetalData.KFactor;
-					item.BendRadius = sheetMetalData.BendRadius.FromSldWorks();
-				}
+                    item.BendRadius = sheetMetalData.BendRadius.FromSldWorks();
+                }
 
-				if (item.Description == null)
+                if (item.Description == null)
                     item.Description = model.Extension.CustomPropertyManager[config].Get("Description");
 
                 if (item.Description == null)
@@ -313,7 +348,7 @@ namespace ExportDXF.Forms
 
                 item.Material = part.GetMaterialPropertyName2(config, out db);
 
-				if (part == null)
+                if (part == null)
                     continue;
 
                 SavePartToDXF(part, config, savepath);
@@ -322,9 +357,9 @@ namespace ExportDXF.Forms
 
             try
             {
-				var drawingInfo = DrawingInfo.Parse(prefix);
-				var bomName = drawingInfo != null ? string.Format("{0} {1} BOM", drawingInfo.JobNo, drawingInfo.DrawingNo) : "BOM";
-				var bomFile = Path.Combine(savePath, bomName + ".xlsx");
+                var drawingInfo = DrawingInfo.Parse(prefix);
+                var bomName = drawingInfo != null ? string.Format("{0} {1} BOM", drawingInfo.JobNo, drawingInfo.DrawingNo) : "BOM";
+                var bomFile = Path.Combine(savePath, bomName + ".xlsx");
                 CreateBOMExcelFile(bomFile, items.ToList());
             }
             catch (Exception ex)
@@ -363,11 +398,11 @@ namespace ExportDXF.Forms
 
                 if (templateDrawing == null)
                     templateDrawing = CreateDrawing();
-                
+
                 var sheet = templateDrawing.IGetCurrentSheet();
                 var modelName = Path.GetFileNameWithoutExtension(partModel.GetPathName());
                 sheet.SetName(modelName);
-                
+
                 Print(partModel.GetTitle() + " - Creating flat pattern.");
                 SolidWorks.Interop.sldworks.View view;
                 view = templateDrawing.CreateFlatPatternViewFromModelView3(partModel.GetPathName(), partConfiguration, 0, 0, 0, false, false);
@@ -430,11 +465,11 @@ namespace ExportDXF.Forms
                     if (item.KFactor > 0)
                         partsSheet.Cells[row, 7].Value = item.KFactor;
 
-					if (item.BendRadius > 0)
-						partsSheet.Cells[row, 8].Value = item.BendRadius;
+                    if (item.BendRadius > 0)
+                        partsSheet.Cells[row, 8].Value = item.BendRadius;
                 }
 
-				partsSheet.Column(1).AutoFit();
+                partsSheet.Column(1).AutoFit();
 
                 workbook.Calculate();
                 pkg.Save();
@@ -603,29 +638,33 @@ namespace ExportDXF.Forms
             get { return Path.Combine(Application.StartupPath, "Templates", "Blank.drwdot"); }
         }
 
-		private void textBox1_TextChanged(object sender, EventArgs e)
-		{
-			var model = sldWorks.ActiveDoc as ModelDoc2;
-			var isDrawing = model is DrawingDoc;
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            var model = sldWorks.ActiveDoc as ModelDoc2;
+            var isDrawing = model is DrawingDoc;
 
-			if (!isDrawing)
-				return;
+            if (!isDrawing)
+                return;
 
-			var drawingInfo = DrawingInfo.Parse(activeDocTitleBox.Text);
+            var drawingInfo = DrawingInfo.Parse(activeDocTitleBox.Text);
 
-			if (drawingInfo == null)
-				return;
+            if (drawingInfo == null)
+                return;
 
-			prefixTextBox.Text = string.Format("{0} {1} PT", drawingInfo.JobNo, drawingInfo.DrawingNo);
-			prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
-		}
-	}
+            prefixTextBox.Text = string.Format("{0} {1} PT", drawingInfo.JobNo, drawingInfo.DrawingNo);
+            prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
+        }
+    }
 
-	public class AskViewFlipDecider : IViewFlipDecider
-	{
-		public bool ShouldFlip(SolidWorks.Interop.sldworks.View view)
-		{
-			return MessageBox.Show("Flip view?", "", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
-		}
-	}
+    public class Item2
+    {
+        public string Name { get; set; }
+        public IViewFlipDecider ViewFlipDecider { get; set; }
+    }
+}
+
+
+
+namespace Helpers
+{
 }

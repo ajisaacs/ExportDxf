@@ -1,7 +1,9 @@
 ﻿namespace ExportDXF
 {
-	public interface IViewFlipDecider
+    public interface IViewFlipDecider
     {
         bool ShouldFlip(SolidWorks.Interop.sldworks.View view);
+
+        string Name { get; }
     }
 }

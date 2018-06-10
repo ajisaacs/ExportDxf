@@ -88,6 +88,7 @@
     <Compile Include="BendOrientation.cs" />
     <Compile Include="Bounds.cs" />
     <Compile Include="DrawingInfo.cs" />
+    <Compile Include="AskViewFlipDecider.cs" />
     <Compile Include="Item.cs" />
     <Compile Include="IViewFlipDecider.cs" />
     <Compile Include="ViewFlipDecider.cs" />

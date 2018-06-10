@@ -1,147 +1,156 @@
 ﻿using SolidWorks.Interop.sldworks;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ExportDXF
 {
-	public class ViewFlipDecider : IViewFlipDecider
+    [DisplayName("Automatic")]
+    public class ViewFlipDecider : IViewFlipDecider
     {
+        public string Name => "Automatic";
+
         public bool ShouldFlip(SolidWorks.Interop.sldworks.View view)
         {
-            var orientation = GetOrientation(view);
-			var bounds = GetBounds(view);
-			var bends = GetBends(view);
+            var orientation = ViewHelper.GetOrientation(view);
+            var bounds = ViewHelper.GetBounds(view);
+            var bends = ViewHelper.GetBends(view);
 
-			var up = bends.Where(b => b.Direction == BendDirection.Up).ToList();
-			var down = bends.Where(b => b.Direction == BendDirection.Down).ToList();
+            var up = bends.Where(b => b.Direction == BendDirection.Up).ToList();
+            var down = bends.Where(b => b.Direction == BendDirection.Down).ToList();
 
-			if (down.Count == 0)
-				return false;
+            if (down.Count == 0)
+                return false;
 
-			if (up.Count == 0)
-				return true;
+            if (up.Count == 0)
+                return true;
 
-			var bend = ClosestToBounds(bounds, bends);
+            var bend = ViewHelper.ClosestToBounds(bounds, bends);
 
-			return bend.Direction == BendDirection.Down;
-		}
+            return bend.Direction == BendDirection.Down;
+        }
 
-		private static Bounds GetBounds(SolidWorks.Interop.sldworks.View view)
-		{
-			var outline = view.GetOutline() as double[];
 
-			var minX = outline[0] / 0.0254;
-			var minY = outline[1] / 0.0254;
-			var maxX = outline[2] / 0.0254;
-			var maxY = outline[3] / 0.0254;
+    }
 
-			var width = Math.Abs(minX) + Math.Abs(maxX);
-			var height = Math.Abs(minY) + Math.Abs(maxY);
+    internal static class ViewHelper
+    {
+        public static Bounds GetBounds(SolidWorks.Interop.sldworks.View view)
+        {
+            var outline = view.GetOutline() as double[];
 
-			return new Bounds
-			{
-				X = minX,
-				Y = minY,
-				Width = width,
-				Height = height
-			};
-		}
+            var minX = outline[0] / 0.0254;
+            var minY = outline[1] / 0.0254;
+            var maxX = outline[2] / 0.0254;
+            var maxY = outline[3] / 0.0254;
 
-		private static Bend ClosestToBounds(Bounds bounds, IList<Bend> bends)
-		{
-			var hBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Horizontal).ToList();
-			var vBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Vertical).ToList();
+            var width = Math.Abs(minX) + Math.Abs(maxX);
+            var height = Math.Abs(minY) + Math.Abs(maxY);
 
-			Bend minVBend = null;
-			double minVBendDist = double.MaxValue;
+            return new Bounds
+            {
+                X = minX,
+                Y = minY,
+                Width = width,
+                Height = height
+            };
+        }
 
-			foreach (var bend in vBends)
-			{
-				double distFromLft = Math.Abs(bend.X - bounds.Left);
-				double distFromRgt = Math.Abs(bounds.Right - bend.X);
+        public static Bend ClosestToBounds(Bounds bounds, IList<Bend> bends)
+        {
+            var hBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Horizontal).ToList();
+            var vBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Vertical).ToList();
 
-				double minDist = Math.Min(distFromLft, distFromRgt);
+            Bend minVBend = null;
+            double minVBendDist = double.MaxValue;
 
-				if (minDist < minVBendDist)
-				{
-					minVBendDist = minDist;
-					minVBend = bend;
-				}
-			}
+            foreach (var bend in vBends)
+            {
+                double distFromLft = Math.Abs(bend.X - bounds.Left);
+                double distFromRgt = Math.Abs(bounds.Right - bend.X);
 
-			Bend minHBend = null;
-			double minHBendDist = double.MaxValue;
+                double minDist = Math.Min(distFromLft, distFromRgt);
 
-			foreach (var bend in hBends)
-			{
-				double distFromBtm = Math.Abs(bend.Y - bounds.Bottom);
-				double distFromTop = Math.Abs(bounds.Top - bend.Y);
+                if (minDist < minVBendDist)
+                {
+                    minVBendDist = minDist;
+                    minVBend = bend;
+                }
+            }
 
-				double minDist = Math.Min(distFromBtm, distFromTop);
+            Bend minHBend = null;
+            double minHBendDist = double.MaxValue;
 
-				if (minDist < minHBendDist)
-				{
-					minHBendDist = minDist;
-					minHBend = bend;
-				}
-			}
+            foreach (var bend in hBends)
+            {
+                double distFromBtm = Math.Abs(bend.Y - bounds.Bottom);
+                double distFromTop = Math.Abs(bounds.Top - bend.Y);
 
-			return minHBendDist < minVBendDist ? minHBend : minVBend;
-		}
+                double minDist = Math.Min(distFromBtm, distFromTop);
 
-		private static Bend SmallestYCoordinate(IList<Bend> bends)
-		{
-			double dist = double.MaxValue;
-			int index = -1;
+                if (minDist < minHBendDist)
+                {
+                    minHBendDist = minDist;
+                    minHBend = bend;
+                }
+            }
 
-			for (int i = 0; i < bends.Count; i++)
-			{
-				var bend = bends[i];
+            return minHBendDist < minVBendDist ? minHBend : minVBend;
+        }
 
-				if (bend.Y < dist)
-				{
-					dist = bend.Y;
-					index = i;
-				}
-			}
+        public static Bend SmallestYCoordinate(IList<Bend> bends)
+        {
+            double dist = double.MaxValue;
+            int index = -1;
 
-			return index == -1 ? null : bends[index];
-		}
+            for (int i = 0; i < bends.Count; i++)
+            {
+                var bend = bends[i];
 
-		private static Bend SmallestXCoordinate(IList<Bend> bends)
-		{
-			double dist = double.MaxValue;
-			int index = -1;
+                if (bend.Y < dist)
+                {
+                    dist = bend.Y;
+                    index = i;
+                }
+            }
 
-			for (int i = 0; i < bends.Count; i++)
-			{
-				var bend = bends[i];
+            return index == -1 ? null : bends[index];
+        }
 
-				if (bend.X < dist)
-				{
-					dist = bend.X;
-					index = i;
-				}
-			}
+        public static Bend SmallestXCoordinate(IList<Bend> bends)
+        {
+            double dist = double.MaxValue;
+            int index = -1;
 
-			return index == -1 ? null : bends[index];
-		}
+            for (int i = 0; i < bends.Count; i++)
+            {
+                var bend = bends[i];
 
-		private static BendDirection GetBendDirection(Note note)
+                if (bend.X < dist)
+                {
+                    dist = bend.X;
+                    index = i;
+                }
+            }
+
+            return index == -1 ? null : bends[index];
+        }
+
+        public static BendDirection GetBendDirection(Note note)
         {
             var txt = note.GetText();
 
             return txt.ToUpper().Contains("UP") ? BendDirection.Up : BendDirection.Down;
         }
 
-        private static IEnumerable<Note> GetBendNotes(SolidWorks.Interop.sldworks.View view)
+        public static IEnumerable<Note> GetBendNotes(SolidWorks.Interop.sldworks.View view)
         {
             return (view.GetNotes() as Array)?.Cast<Note>();
         }
 
-        private static Note GetLeftMostNote(SolidWorks.Interop.sldworks.View view)
+        public static Note GetLeftMostNote(SolidWorks.Interop.sldworks.View view)
         {
             var notes = GetBendNotes(view);
 
@@ -163,7 +172,7 @@ namespace ExportDXF
             return leftMostNote;
         }
 
-        private static Note GetBottomMostNote(SolidWorks.Interop.sldworks.View view)
+        public static Note GetBottomMostNote(SolidWorks.Interop.sldworks.View view)
         {
             var notes = GetBendNotes(view);
 
@@ -185,12 +194,12 @@ namespace ExportDXF
             return btmMostNote;
         }
 
-        private static IEnumerable<double> GetBendAngles(SolidWorks.Interop.sldworks.View view)
+        public static IEnumerable<double> GetBendAngles(SolidWorks.Interop.sldworks.View view)
         {
             var angles = new List<double>();
             var notes = GetBendNotes(view);
 
-			foreach (var note in notes)
+            foreach (var note in notes)
             {
                 var angle = RadiansToDegrees(note.Angle);
                 angles.Add(angle);
@@ -199,49 +208,49 @@ namespace ExportDXF
             return angles;
         }
 
-		private static List<Bend> GetBends(SolidWorks.Interop.sldworks.View view)
-		{
-			var bends = new List<Bend>();
-			var notes = GetBendNotes(view);
+        public static List<Bend> GetBends(SolidWorks.Interop.sldworks.View view)
+        {
+            var bends = new List<Bend>();
+            var notes = GetBendNotes(view);
 
-			const string pattern = @"(?<DIRECTION>(UP|DOWN))\s*(?<ANGLE>(\d+))°";
+            const string pattern = @"(?<DIRECTION>(UP|DOWN))\s*(?<ANGLE>(\d+))°";
 
-			foreach (var note in notes)
-			{
-				var pos = note.GetTextPoint2() as double[];
+            foreach (var note in notes)
+            {
+                var pos = note.GetTextPoint2() as double[];
 
-				var x = pos[0] / 0.0254;
-				var y = pos[1] / 0.0254;
+                var x = pos[0] / 0.0254;
+                var y = pos[1] / 0.0254;
 
-				var text = note.GetText();
-				var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+                var text = note.GetText();
+                var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
 
-				if (!match.Success)
-					continue;
+                if (!match.Success)
+                    continue;
 
-				var angle = double.Parse(match.Groups["ANGLE"].Value);
-				var direection = match.Groups["DIRECTION"].Value;
+                var angle = double.Parse(match.Groups["ANGLE"].Value);
+                var direection = match.Groups["DIRECTION"].Value;
 
-				var bend = new Bend
-				{
-					ParallelBendAngle = RadiansToDegrees(note.Angle),
-					Angle = angle,
-					Direction = direection == "UP" ? BendDirection.Up : BendDirection.Down,
-					X = x,
-					Y = y
-				};
+                var bend = new Bend
+                {
+                    ParallelBendAngle = RadiansToDegrees(note.Angle),
+                    Angle = angle,
+                    Direction = direection == "UP" ? BendDirection.Up : BendDirection.Down,
+                    X = x,
+                    Y = y
+                };
 
-				bends.Add(bend);
-			}
+                bends.Add(bend);
+            }
 
-			return bends;
-		}
+            return bends;
+        }
 
-		private static BendOrientation GetOrientation(SolidWorks.Interop.sldworks.View view)
+        public static BendOrientation GetOrientation(SolidWorks.Interop.sldworks.View view)
         {
             var angles = GetBendAngles(view);
 
-			var bends = GetBends(view);
+            var bends = GetBends(view);
 
             var vertical = 0;
             var horizontal = 0;
@@ -268,7 +277,7 @@ namespace ExportDXF
             return vertical > horizontal ? BendOrientation.Vertical : BendOrientation.Horizontal;
         }
 
-        private static BendOrientation GetAngleOrientation(double angleInDegrees)
+        public static BendOrientation GetAngleOrientation(double angleInDegrees)
         {
             if (angleInDegrees < 10 || angleInDegrees > 350)
                 return BendOrientation.Horizontal;
@@ -285,7 +294,7 @@ namespace ExportDXF
             return BendOrientation.Unknown;
         }
 
-        private static double RadiansToDegrees(double angleInRadians)
+        public static double RadiansToDegrees(double angleInRadians)
         {
             return Math.Round(angleInRadians * 180.0 / Math.PI, 8);
         }
