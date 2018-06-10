@@ -112,6 +112,10 @@ namespace ExportDXF.Forms
                 var item = comboBox1.SelectedItem as Item2;
                 viewFlipDecider = item.ViewFlipDecider;
 
+                activeDocTitleBox.Enabled = false;
+                prefixTextBox.Enabled = false;
+                comboBox1.Enabled = false;
+
                 button1.Image = Properties.Resources.stop_alt;
 
                 if (richTextBox1.TextLength != 0)
@@ -136,6 +140,10 @@ namespace ExportDXF.Forms
                     sldWorks.CloseDoc(((ModelDoc2)templateDrawing).GetTitle());
                     templateDrawing = null;
                 }
+
+                activeDocTitleBox.Enabled = true;
+                prefixTextBox.Enabled = true;
+                comboBox1.Enabled = true;
 
                 button1.Image = Properties.Resources.play;
             }));
