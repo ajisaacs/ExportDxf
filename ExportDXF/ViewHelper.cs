@@ -184,7 +184,7 @@ namespace ExportDXF
             var bends = new List<Bend>();
             var notes = GetBendNotes(view);
 
-            const string pattern = @"(?<DIRECTION>(UP|DOWN))\s*(?<ANGLE>(\d+))°";
+            const string pattern = @"(?<DIRECTION>(UP|DOWN))\s*(?<ANGLE>(\d+(.\d*)?))°";
 
             foreach (var note in notes)
             {
