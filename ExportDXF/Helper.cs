@@ -10,7 +10,7 @@ using System.Windows.Forms;
 
 namespace ExportDXF
 {
-	public static class Helper
+    public static class Helper
     {
         public static Feature GetFeatureByTypeName(this ModelDoc2 model, string featureName)
         {
@@ -34,9 +34,9 @@ namespace ExportDXF
 
             while (feature != null)
             {
-				var name = feature.GetTypeName();
+                var name = feature.GetTypeName();
 
-				if (name == featureName)
+                if (name == featureName)
                     list.Add(feature);
 
                 feature = feature.GetNextFeature() as Feature;
@@ -45,24 +45,24 @@ namespace ExportDXF
             return list;
         }
 
-		public static List<Feature> GetAllSubFeaturesByTypeName(this Feature feature, string subFeatureName)
-		{
-			var subFeature = feature.GetFirstSubFeature() as Feature;
-			var list = new List<Feature>();
+        public static List<Feature> GetAllSubFeaturesByTypeName(this Feature feature, string subFeatureName)
+        {
+            var subFeature = feature.GetFirstSubFeature() as Feature;
+            var list = new List<Feature>();
 
-			while (subFeature != null)
-			{
-				Debug.WriteLine(subFeature.GetTypeName2());
-				if (subFeature.GetTypeName() == subFeatureName)
-					list.Add(subFeature);
+            while (subFeature != null)
+            {
+                Debug.WriteLine(subFeature.GetTypeName2());
+                if (subFeature.GetTypeName() == subFeatureName)
+                    list.Add(subFeature);
 
-				subFeature = subFeature.GetNextSubFeature() as Feature;
-			}
+                subFeature = subFeature.GetNextSubFeature() as Feature;
+            }
 
-			return list;
-		}
+            return list;
+        }
 
-		public static bool HasFlatPattern(this ModelDoc2 model)
+        public static bool HasFlatPattern(this ModelDoc2 model)
         {
             return model.GetBendState() != (int)swSMBendState_e.swSMBendStateNone;
         }
@@ -178,54 +178,54 @@ namespace ExportDXF
             return -1;
         }
 
-		public static Dimension GetDimension(this Feature feature, string dimName)
-		{
-			return feature?.Parameter(dimName) as Dimension;
-		}
+        public static Dimension GetDimension(this Feature feature, string dimName)
+        {
+            return feature?.Parameter(dimName) as Dimension;
+        }
 
-		public static string PunctuateList(this IEnumerable<string> stringList)
-		{
-			var list = stringList.ToList();
+        public static string PunctuateList(this IEnumerable<string> stringList)
+        {
+            var list = stringList.ToList();
 
-			switch (list.Count)
-			{
-				case 0:
-					return string.Empty;
+            switch (list.Count)
+            {
+                case 0:
+                    return string.Empty;
 
-				case 1:
-					return list[0];
+                case 1:
+                    return list[0];
 
-				case 2:
-					return string.Format("{0} and {1}", list[0], list[1]);
+                case 2:
+                    return string.Format("{0} and {1}", list[0], list[1]);
 
-				default:
-					var s = string.Empty;
+                default:
+                    var s = string.Empty;
 
-					for (int i = 0; i < list.Count - 1; i++)
-						s += list[i] + ", ";
+                    for (int i = 0; i < list.Count - 1; i++)
+                        s += list[i] + ", ";
 
-					s += "and " + list.Last();
+                    s += "and " + list.Last();
 
-					return s;
-			}
-		}
-	}
+                    return s;
+            }
+        }
+    }
 
-	public static class Units
-	{
-		/// <summary>
-		/// Multiply factor needed to convert the desired units to meters.
-		/// </summary>
-		public static double ScaleFactor = 0.0254; // inches to meters
+    public static class Units
+    {
+        /// <summary>
+        /// Multiply factor needed to convert the desired units to meters.
+        /// </summary>
+        public static double ScaleFactor = 0.0254; // inches to meters
 
-		public static double ToSldWorks(this double d)
-		{
-			return Math.Round(d * ScaleFactor, 8);
-		}
+        public static double ToSldWorks(this double d)
+        {
+            return Math.Round(d * ScaleFactor, 8);
+        }
 
-		public static double FromSldWorks(this double d)
-		{
-			return Math.Round(d / ScaleFactor, 8);
-		}
-	}
+        public static double FromSldWorks(this double d)
+        {
+            return Math.Round(d / ScaleFactor, 8);
+        }
+    }
 }
