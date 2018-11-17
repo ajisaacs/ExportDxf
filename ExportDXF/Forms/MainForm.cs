@@ -319,7 +319,10 @@ namespace ExportDXF.Forms
             foreach (var item in items)
             {
                 if (worker.CancellationPending)
-                    break;
+                {
+                    Print("Canceled by user.\n", Color.Red);
+                    return;
+                }
 
                 var fileName = GetFileName(item);
                 var savepath = Path.Combine(savePath, fileName + ".dxf");
@@ -434,6 +437,17 @@ namespace ExportDXF.Forms
 
                 var drawingModel = templateDrawing as ModelDoc2;
                 drawingModel.ViewZoomtofit2();
+               
+                if (HideModelSketches(view))
+                {
+                    // delete the current view that has sketches shown
+                    drawingModel.SelectByName(0, view.Name);
+                    drawingModel.DeleteSelection(false);
+
+                    // recreate the flat pattern view
+                    view = templateDrawing.CreateFlatPatternViewFromModelView3(partModel.GetPathName(), partConfiguration, 0, 0, 0, false, false);
+                    view.ShowSheetMetalBendNotes = true;
+                }
 
                 if (ShouldFlipView(view))
                 {
@@ -456,6 +470,34 @@ namespace ExportDXF.Forms
                 MessageBox.Show(ex.Message);
                 return false;
             }
+        }
+
+        private bool HideModelSketches(IView view)
+        {
+            var model = view.ReferencedDocument;
+            var activeConfig = ((Configuration)model.GetActiveConfiguration()).Name;
+
+            var modelChanged = false;
+            var refConfig = view.ReferencedConfiguration;
+            model.ShowConfiguration(refConfig);
+
+            var sketches = model.GetAllFeaturesByTypeName("ProfileFeature");
+
+            foreach (var sketch in sketches)
+            {
+                var visible = (swVisibilityState_e)sketch.Visible;
+
+                if (visible == swVisibilityState_e.swVisibilityStateShown)
+                {
+                    sketch.Select2(true, -1);
+                    model.BlankSketch();
+                    modelChanged = true;
+                }
+            }
+
+            model.ShowConfiguration(activeConfig);
+
+            return modelChanged;
         }
 
         private void CreateBOMExcelFile(string filepath, IList<Item> items)
