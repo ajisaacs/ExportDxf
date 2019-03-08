@@ -1,5 +1,4 @@
-﻿using OfficeOpenXml;
-using SolidWorks.Interop.sldworks;
+﻿using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
@@ -97,7 +96,6 @@ namespace ExportDXF.Forms
 
         private void button2_Click(object sender, EventArgs e)
         {
-
         }
 
         private void Worker_DoWork(object sender, DoWorkEventArgs e)
@@ -437,7 +435,7 @@ namespace ExportDXF.Forms
 
                 var drawingModel = templateDrawing as ModelDoc2;
                 drawingModel.ViewZoomtofit2();
-               
+
                 if (HideModelSketches(view))
                 {
                     // delete the current view that has sketches shown
@@ -673,8 +671,6 @@ namespace ExportDXF.Forms
             var assemblyComponents = ((Array)assembly.GetComponents(topLevel))
                 .Cast<Component2>()
                 .Where(c => !c.IsHidden(true));
-
-
 
             var componentGroups = assemblyComponents
                 .GroupBy(c => c.GetTitle() + c.ReferencedConfiguration);

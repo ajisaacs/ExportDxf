@@ -1,6 +1,6 @@
 ﻿namespace ExportDXF
 {
-	enum BendOrientation
+    internal enum BendOrientation
     {
         Vertical,
         Horizontal,

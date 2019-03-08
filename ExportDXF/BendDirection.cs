@@ -1,6 +1,6 @@
 ﻿namespace ExportDXF
 {
-	enum BendDirection
+    internal enum BendDirection
     {
         Up,
         Down
