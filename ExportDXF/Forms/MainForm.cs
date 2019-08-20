@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -352,6 +353,8 @@ namespace ExportDXF.Forms
                 if (item.Description == null)
                     item.Description = model.Extension.CustomPropertyManager[""].Get("Description");
 
+                item.Description = RemoveFontXml(item.Description);
+
                 var db = string.Empty;
 
                 item.Material = part.GetMaterialPropertyName2(config, out db);
@@ -378,6 +381,24 @@ namespace ExportDXF.Forms
             {
                 Print(ex.Message, Color.Red);
             }
+        }
+
+        private string RemoveFontXml(string s)
+        {
+            if (s == null)
+                return null;
+
+            var fontXmlRegex = new Regex("<FONT name=\".*?\">");
+            var matches = fontXmlRegex.Matches(s)
+                .Cast<Match>()
+                .OrderByDescending(m => m.Index);
+
+            foreach (var match in matches)
+            {
+                s = s.Remove(match.Index, match.Length);
+            }
+
+            return s;
         }
 
         private string GetFileName(Item item)
@@ -588,9 +609,7 @@ namespace ExportDXF.Forms
         private List<Item> GetItems(BomTableAnnotation bom)
         {
             var items = new List<Item>();
-
             var table = bom as TableAnnotation;
-
             var itemNoColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_ItemNumber);
 
             if (itemNoColumnIndex == -1)
