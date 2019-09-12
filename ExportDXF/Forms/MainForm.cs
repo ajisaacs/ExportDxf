@@ -326,6 +326,18 @@ namespace ExportDXF.Forms
 
                 var fileName = GetFileName(item);
                 var savepath = Path.Combine(savePath, fileName + ".dxf");
+
+                var suppressionState = (swComponentSuppressionState_e)item.Component.GetSuppression();
+
+                switch (suppressionState)
+                {
+                    case swComponentSuppressionState_e.swComponentFullyLightweight:
+                    case swComponentSuppressionState_e.swComponentLightweight:
+                    case swComponentSuppressionState_e.swComponentSuppressed:
+                        item.Component.SetSuppression2((int)swComponentSuppressionState_e.swComponentResolved);
+                        break;
+                }
+
                 var model = item.Component.GetModelDoc2() as ModelDoc2;
                 var part = model as PartDoc;
 
