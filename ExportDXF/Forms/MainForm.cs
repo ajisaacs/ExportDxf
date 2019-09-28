@@ -378,6 +378,21 @@ namespace ExportDXF.Forms
                 {
                     item.FileName = Path.GetFileNameWithoutExtension(savepath);
                 }
+                else
+                {
+                    var desc = item.Description.ToLower();
+
+                    if (desc.Contains("laser"))
+                    {
+                        Print($"Failed to export item #{item.ItemNo} but description says it is laser cut.", Color.Red);
+                    }
+                    else if (desc.Contains("plasma"))
+                    {
+                        Print($"Failed to export item #{item.ItemNo} but description says it is plasma cut.", Color.Red);
+                    }
+                }
+
+                Print("");
 
                 Application.DoEvents();
             }
@@ -495,7 +510,7 @@ namespace ExportDXF.Forms
                 drawingModel.SaveAs(savePath);
 
                 Print(partModel.GetTitle() + " - Saved to \"" + savePath + "\"", Color.Green);
-                Print("");
+                
 
                 drawingModel.SelectByName(0, view.Name);
                 drawingModel.DeleteSelection(false);
