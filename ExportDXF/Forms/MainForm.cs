@@ -611,7 +611,16 @@ namespace ExportDXF.Forms
                     col++;
                 }
 
-                partsSheet.Column(2).AutoFit();
+                for (int i = 1; i <= 9; i++)
+                {
+                    var column = partsSheet.Column(i);
+
+                    if (column.Style.WrapText)
+                        continue;
+
+                    column.AutoFit();
+                    column.Width += 1;
+                }
 
                 workbook.Calculate();
                 pkg.Save();
