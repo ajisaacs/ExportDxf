@@ -415,7 +415,7 @@ namespace ExportDXF.Forms
             if (s == null)
                 return null;
 
-            var fontXmlRegex = new Regex("<FONT name=\".*?\">");
+            var fontXmlRegex = new Regex("<FONT.*?\\>");
             var matches = fontXmlRegex.Matches(s)
                 .Cast<Match>()
                 .OrderByDescending(m => m.Index);

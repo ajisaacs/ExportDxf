@@ -46,7 +46,7 @@
             this.activeDocTitleBox.Location = new System.Drawing.Point(130, 13);
             this.activeDocTitleBox.Name = "activeDocTitleBox";
             this.activeDocTitleBox.ReadOnly = true;
-            this.activeDocTitleBox.Size = new System.Drawing.Size(424, 25);
+            this.activeDocTitleBox.Size = new System.Drawing.Size(584, 25);
             this.activeDocTitleBox.TabIndex = 2;
             this.activeDocTitleBox.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
             // 
@@ -59,7 +59,7 @@
             this.richTextBox1.Location = new System.Drawing.Point(12, 119);
             this.richTextBox1.Name = "richTextBox1";
             this.richTextBox1.ReadOnly = true;
-            this.richTextBox1.Size = new System.Drawing.Size(594, 260);
+            this.richTextBox1.Size = new System.Drawing.Size(754, 329);
             this.richTextBox1.TabIndex = 3;
             this.richTextBox1.Text = "";
             // 
@@ -87,14 +87,14 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.prefixTextBox.Location = new System.Drawing.Point(130, 44);
             this.prefixTextBox.Name = "prefixTextBox";
-            this.prefixTextBox.Size = new System.Drawing.Size(424, 25);
+            this.prefixTextBox.Size = new System.Drawing.Size(584, 25);
             this.prefixTextBox.TabIndex = 2;
             // 
             // button1
             // 
             this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.button1.Image = global::ExportDXF.Properties.Resources.play;
-            this.button1.Location = new System.Drawing.Point(560, 13);
+            this.button1.Location = new System.Drawing.Point(720, 13);
             this.button1.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(46, 56);
@@ -123,7 +123,7 @@
             // MainForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.ClientSize = new System.Drawing.Size(618, 391);
+            this.ClientSize = new System.Drawing.Size(778, 460);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
