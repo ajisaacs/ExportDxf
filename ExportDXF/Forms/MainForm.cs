@@ -261,9 +261,9 @@ namespace ExportDXF.Forms
 
                 Print(bom.BomFeature.Name);
                 Print("Fetching components...");
+                items.AddRange(GetItems(bom));
                 Print("Found " + items.Count);
 
-                items.AddRange(GetItems(bom));
             }
 
             Print("Found " + items.Count + " total");
@@ -323,24 +323,12 @@ namespace ExportDXF.Forms
             foreach (var item in items)
             {
                 if (worker.CancellationPending)
-                {
-                    Print("Canceled by user.\n", Color.Red);
                     return;
-                }
 
                 var fileName = GetFileName(item);
                 var savepath = Path.Combine(savePath, fileName + ".dxf");
 
-                var suppressionState = (swComponentSuppressionState_e)item.Component.GetSuppression();
-
-                switch (suppressionState)
-                {
-                    case swComponentSuppressionState_e.swComponentFullyLightweight:
-                    case swComponentSuppressionState_e.swComponentLightweight:
-                    case swComponentSuppressionState_e.swComponentSuppressed:
-                        item.Component.SetSuppression2((int)swComponentSuppressionState_e.swComponentResolved);
-                        break;
-                }
+                SetLightweightToResolved(item.Component);
 
                 var model = item.Component.GetModelDoc2() as ModelDoc2;
                 var part = model as PartDoc;
@@ -411,6 +399,37 @@ namespace ExportDXF.Forms
             catch (Exception ex)
             {
                 Print(ex.Message, Color.Red);
+            }
+        }
+
+        private void SetLightweightToResolved(Component2 component)
+        {
+            var isSuppressed = component.IsSuppressed();
+
+            if (isSuppressed)
+                return;
+            var suppressionState = (swComponentSuppressionState_e)component.GetSuppression();
+
+            switch (suppressionState)
+            {
+                case swComponentSuppressionState_e.swComponentFullyResolved:
+                case swComponentSuppressionState_e.swComponentResolved:
+                    return;
+
+                case swComponentSuppressionState_e.swComponentFullyLightweight:
+                case swComponentSuppressionState_e.swComponentLightweight:
+                    var error = (swSuppressionError_e)component.SetSuppression2((int)swComponentSuppressionState_e.swComponentResolved);
+
+                    if (error == swSuppressionError_e.swSuppressionChangeOk)
+                    {
+                        var model = component.GetModelDoc2() as ModelDoc2;
+
+                        if (model != null)
+                        {
+                            model.ForceRebuild3(false);
+                        }
+                    }
+                    break;
             }
         }
 
