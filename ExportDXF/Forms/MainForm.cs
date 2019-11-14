@@ -719,10 +719,16 @@ namespace ExportDXF.Forms
 
                 var distinctComponents = bomComponents
                     .GroupBy(c => c.ReferencedConfiguration)
-                    .Select(group => group.First());
+                    .Select(group => group.First())
+                    .ToList();
 
-                if (distinctComponents.Count() == 1)
+                foreach (var component in bomComponents)
                 {
+                    if (component.IsSuppressed())
+                    {
+                        continue;
+                    }
+
                     var qtyString = table.DisplayedText[rowIndex, qtyColumnIndex];
                     int qty = 0;
 
@@ -734,8 +740,10 @@ namespace ExportDXF.Forms
                         Quantity = qty,
                         Description = table.DisplayedText[rowIndex, descriptionColumnIndex],
                         ItemNo = table.DisplayedText[rowIndex, itemNoColumnIndex],
-                        Component = distinctComponents.First()
+                        Component = component
                     });
+
+                    break;
                 }
             }
 
