@@ -249,7 +249,7 @@ namespace ExportDXF.Forms
                 return;
             }
 
-            Print("Found " + bomTables.Count);
+            Print($"Found {bomTables.Count} BOM table(s)");
             Print("");
 
             var items = new List<Item>();
@@ -262,11 +262,9 @@ namespace ExportDXF.Forms
                 Print(bom.BomFeature.Name);
                 Print("Fetching components...");
                 items.AddRange(GetItems(bom));
-                Print("Found " + items.Count);
-
+                Print($"Found {items.Count} component(s)");
             }
 
-            Print("Found " + items.Count + " total");
             ExportToDXF(items);
         }
 
