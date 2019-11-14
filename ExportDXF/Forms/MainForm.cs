@@ -89,11 +89,14 @@ namespace ExportDXF.Forms
         {
             if (worker.IsBusy)
             {
+                button1.Enabled = false;
                 worker.CancelAsync();
                 return;
             }
-
-            worker.RunWorkerAsync();
+            else
+            {
+                worker.RunWorkerAsync();
+            }
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -146,6 +149,7 @@ namespace ExportDXF.Forms
                 comboBox1.Enabled = true;
 
                 button1.Image = Properties.Resources.play;
+                button1.Enabled = true;
             }));
 
             var duration = DateTime.Now - timeStarted;
