@@ -8,7 +8,7 @@ namespace ExportDXF
 {
     internal static class ViewHelper
     {
-        public static Bounds GetBounds(SolidWorks.Interop.sldworks.View view)
+        public static Bounds GetBounds(View view)
         {
             var outline = view.GetOutline() as double[];
 
@@ -29,7 +29,7 @@ namespace ExportDXF
             };
         }
 
-        public static Bend ClosestToBounds(Bounds bounds, IList<Bend> bends)
+        public static Bend GetBendClosestToBounds(Bounds bounds, IList<Bend> bends)
         {
             var hBends = bends.Where(b => GetAngleOrientation(b.BendLineAngle) == BendOrientation.Horizontal).ToList();
             var vBends = bends.Where(b => GetAngleOrientation(b.BendLineAngle) == BendOrientation.Vertical).ToList();
@@ -71,7 +71,7 @@ namespace ExportDXF
             return minHBendDist < minVBendDist ? minHBend : minVBend;
         }
 
-        public static Bend SmallestYCoordinate(IList<Bend> bends)
+        public static Bend GetBendWithSmallestYCoordinate(IList<Bend> bends)
         {
             double dist = double.MaxValue;
             int index = -1;
@@ -90,7 +90,7 @@ namespace ExportDXF
             return index == -1 ? null : bends[index];
         }
 
-        public static Bend SmallestXCoordinate(IList<Bend> bends)
+        public static Bend GetBendWithSmallestXCoordinate(IList<Bend> bends)
         {
             double dist = double.MaxValue;
             int index = -1;
@@ -116,12 +116,12 @@ namespace ExportDXF
             return txt.ToUpper().Contains("UP") ? BendDirection.Up : BendDirection.Down;
         }
 
-        public static IEnumerable<Note> GetBendNotes(SolidWorks.Interop.sldworks.View view)
+        public static IEnumerable<Note> GetBendNotes(View view)
         {
             return (view.GetNotes() as Array)?.Cast<Note>();
         }
 
-        public static Note GetLeftMostNote(SolidWorks.Interop.sldworks.View view)
+        public static Note GetLeftMostNote(View view)
         {
             var notes = GetBendNotes(view);
 
@@ -143,7 +143,7 @@ namespace ExportDXF
             return leftMostNote;
         }
 
-        public static Note GetBottomMostNote(SolidWorks.Interop.sldworks.View view)
+        public static Note GetBottomMostNote(View view)
         {
             var notes = GetBendNotes(view);
 
@@ -165,7 +165,7 @@ namespace ExportDXF
             return btmMostNote;
         }
 
-        public static IEnumerable<double> GetBendAngles(SolidWorks.Interop.sldworks.View view)
+        public static IEnumerable<double> GetBendAngles(View view)
         {
             var angles = new List<double>();
             var notes = GetBendNotes(view);
@@ -179,7 +179,7 @@ namespace ExportDXF
             return angles;
         }
 
-        public static List<Bend> GetBends(SolidWorks.Interop.sldworks.View view)
+        public static List<Bend> GetBends(View view)
         {
             var bends = new List<Bend>();
             var notes = GetBendNotes(view);
@@ -217,7 +217,7 @@ namespace ExportDXF
             return bends;
         }
 
-        public static BendOrientation GetOrientation(SolidWorks.Interop.sldworks.View view)
+        public static BendOrientation GetOrientation(View view)
         {
             var angles = GetBendAngles(view);
 

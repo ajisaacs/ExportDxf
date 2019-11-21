@@ -29,7 +29,7 @@ namespace ExportDXF
             if (up.Count == 0)
                 return true;
 
-            var bend = ViewHelper.ClosestToBounds(bounds, bends);
+            var bend = ViewHelper.GetBendClosestToBounds(bounds, bends);
 
             return bend.Direction == BendDirection.Down;
         }
