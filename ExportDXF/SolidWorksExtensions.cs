@@ -20,7 +20,7 @@ namespace ExportDXF
                 feature = feature.GetNextFeature() as Feature;
             }
 
-            return feature;
+            return null;
         }
 
         public static List<Feature> GetAllFeaturesByTypeName(this ModelDoc2 model, string featureName)
