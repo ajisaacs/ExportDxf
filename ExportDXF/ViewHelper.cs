@@ -92,7 +92,6 @@ namespace ExportDXF
 
         public static Bend SmallestXCoordinate(IList<Bend> bends)
         {
-            return bends.Min(b => b.X);
             double dist = double.MaxValue;
             int index = -1;
 
