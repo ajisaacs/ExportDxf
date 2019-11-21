@@ -12,6 +12,25 @@ namespace ExportDXF
 {
     public static class Helper
     {
+        public static string GetNumWithSuffix(int i)
+        {
+            if (i >= 11 && i <= 13)
+                return i.ToString() + "th";
+
+            var j = i % 10;
+
+            switch (j)
+            {
+                case 1: return i.ToString() + "st";
+                case 2: return i.ToString() + "nd";
+                case 3: return i.ToString() + "rd";
+                default: return i.ToString() + "th";
+            }
+        }
+    }
+
+    public static class SolidWorksExtensions
+    {
         public static Feature GetFeatureByTypeName(this ModelDoc2 model, string featureName)
         {
             var feature = model.FirstFeature() as Feature;
@@ -99,57 +118,6 @@ namespace ExportDXF
             return model.GetTitle();
         }
 
-        public static void AppendText(this RichTextBox box, string text, Color color)
-        {
-            box.SelectionStart = box.TextLength;
-            box.SelectionLength = 0;
-
-            box.SelectionColor = color;
-            box.AppendText(text);
-            box.SelectionColor = box.ForeColor;
-        }
-
-        public static string ToReadableFormat(this TimeSpan ts)
-        {
-            var s = new StringBuilder();
-
-            if (ts.TotalHours >= 1)
-            {
-                var hrs = ts.Hours + ts.Days * 24.0;
-
-                s.Append(string.Format("{0}hrs ", hrs));
-                s.Append(string.Format("{0}min ", ts.Minutes));
-                s.Append(string.Format("{0}sec", ts.Seconds));
-            }
-            else if (ts.TotalMinutes >= 1)
-            {
-                s.Append(string.Format("{0}min ", ts.Minutes));
-                s.Append(string.Format("{0}sec", ts.Seconds));
-            }
-            else
-            {
-                s.Append(string.Format("{0} seconds", ts.Seconds));
-            }
-
-            return s.ToString();
-        }
-
-        public static string GetNumWithSuffix(int i)
-        {
-            if (i >= 11 && i <= 13)
-                return i.ToString() + "th";
-
-            var j = i % 10;
-
-            switch (j)
-            {
-                case 1: return i.ToString() + "st";
-                case 2: return i.ToString() + "nd";
-                case 3: return i.ToString() + "rd";
-                default: return i.ToString() + "th";
-            }
-        }
-
         public static int IndexOfColumnType(this TableAnnotation table, swTableColumnTypes_e columnType)
         {
             for (int columnIndex = 0; columnIndex < table.ColumnCount; ++columnIndex)
@@ -209,6 +177,45 @@ namespace ExportDXF
                     return s;
             }
         }
+    }
+
+    public static class Extensions
+    {
+        public static void AppendText(this RichTextBox box, string text, Color color)
+        {
+            box.SelectionStart = box.TextLength;
+            box.SelectionLength = 0;
+
+            box.SelectionColor = color;
+            box.AppendText(text);
+            box.SelectionColor = box.ForeColor;
+        }
+
+        public static string ToReadableFormat(this TimeSpan ts)
+        {
+            var s = new StringBuilder();
+
+            if (ts.TotalHours >= 1)
+            {
+                var hrs = ts.Hours + ts.Days * 24.0;
+
+                s.Append(string.Format("{0}hrs ", hrs));
+                s.Append(string.Format("{0}min ", ts.Minutes));
+                s.Append(string.Format("{0}sec", ts.Seconds));
+            }
+            else if (ts.TotalMinutes >= 1)
+            {
+                s.Append(string.Format("{0}min ", ts.Minutes));
+                s.Append(string.Format("{0}sec", ts.Seconds));
+            }
+            else
+            {
+                s.Append(string.Format("{0} seconds", ts.Seconds));
+            }
+
+            return s.ToString();
+        }
+
     }
 
     public static class Units
