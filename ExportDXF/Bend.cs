@@ -4,7 +4,7 @@
     {
         public BendDirection Direction { get; set; }
 
-        public double ParallelBendAngle { get; set; }
+        public double BendLineAngle { get; set; }
 
         public double Angle { get; set; }
 

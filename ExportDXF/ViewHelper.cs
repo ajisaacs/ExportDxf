@@ -31,8 +31,8 @@ namespace ExportDXF
 
         public static Bend ClosestToBounds(Bounds bounds, IList<Bend> bends)
         {
-            var hBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Horizontal).ToList();
-            var vBends = bends.Where(b => GetAngleOrientation(b.ParallelBendAngle) == BendOrientation.Vertical).ToList();
+            var hBends = bends.Where(b => GetAngleOrientation(b.BendLineAngle) == BendOrientation.Horizontal).ToList();
+            var vBends = bends.Where(b => GetAngleOrientation(b.BendLineAngle) == BendOrientation.Vertical).ToList();
 
             Bend minVBend = null;
             double minVBendDist = double.MaxValue;
@@ -92,6 +92,7 @@ namespace ExportDXF
 
         public static Bend SmallestXCoordinate(IList<Bend> bends)
         {
+            return bends.Min(b => b.X);
             double dist = double.MaxValue;
             int index = -1;
 
@@ -204,7 +205,7 @@ namespace ExportDXF
 
                 var bend = new Bend
                 {
-                    ParallelBendAngle = RadiansToDegrees(note.Angle),
+                    BendLineAngle = RadiansToDegrees(note.Angle),
                     Angle = angle,
                     Direction = direection == "UP" ? BendDirection.Up : BendDirection.Down,
                     X = x,
