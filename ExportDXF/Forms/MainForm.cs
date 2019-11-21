@@ -62,20 +62,20 @@ namespace ExportDXF.Forms
             task.Start();
         }
 
-        private List<Item2> GetItems()
+        private List<ViewFlipDeciderComboboxItem> GetItems()
         {
             var types = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(s => s.GetTypes())
                 .Where(p => typeof(IViewFlipDecider).IsAssignableFrom(p) && p.IsClass)
                 .ToList();
 
-            var items = new List<Item2>();
+            var items = new List<ViewFlipDeciderComboboxItem>();
 
             foreach (var type in types)
             {
                 var obj = (IViewFlipDecider)Activator.CreateInstance(type);
 
-                items.Add(new Item2
+                items.Add(new ViewFlipDeciderComboboxItem
                 {
                     Name = obj.Name,
                     ViewFlipDecider = obj
@@ -112,7 +112,7 @@ namespace ExportDXF.Forms
 
             Invoke(new MethodInvoker(() =>
             {
-                var item = comboBox1.SelectedItem as Item2;
+                var item = comboBox1.SelectedItem as ViewFlipDeciderComboboxItem;
                 viewFlipDecider = item.ViewFlipDecider;
 
                 activeDocTitleBox.Enabled = false;
@@ -828,11 +828,5 @@ namespace ExportDXF.Forms
             prefixTextBox.Text = string.Format("{0} {1} PT", drawingInfo.JobNo, drawingInfo.DrawingNo);
             prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
         }
-    }
-
-    public class Item2
-    {
-        public string Name { get; set; }
-        public IViewFlipDecider ViewFlipDecider { get; set; }
     }
 }
