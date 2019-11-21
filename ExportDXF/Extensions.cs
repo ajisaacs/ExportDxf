@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
@@ -40,6 +41,33 @@ namespace ExportDXF
             }
 
             return s.ToString();
+        }
+
+        public static string PunctuateList(this IEnumerable<string> stringList)
+        {
+            var list = stringList.ToList();
+
+            switch (list.Count)
+            {
+                case 0:
+                    return string.Empty;
+
+                case 1:
+                    return list[0];
+
+                case 2:
+                    return string.Format("{0} and {1}", list[0], list[1]);
+
+                default:
+                    var s = string.Empty;
+
+                    for (int i = 0; i < list.Count - 1; i++)
+                        s += list[i] + ", ";
+
+                    s += "and " + list.Last();
+
+                    return s;
+            }
         }
     }
 }
