@@ -254,12 +254,17 @@ namespace ExportDXF.Forms
                 if (worker.CancellationPending)
                     return;
 
+                var itemExtractor = new BomItemExtractor(bom);
+                itemExtractor.SkipHiddenRows = true;
+
                 Print(bom.BomFeature.Name);
-                Print("Fetching components...");
-                items.AddRange(GetItems(bom));
-                Print($"Found {items.Count} component(s)");
+                Print($"Fetching components from {bom.BomFeature.Name}");
+
+                var bomItems = itemExtractor.GetItems();
+                items.AddRange(bomItems);
             }
 
+            Print($"Found {items.Count} component(s)");
             ExportToDXF(items);
         }
 
@@ -290,7 +295,10 @@ namespace ExportDXF.Forms
         {
             Print("Fetching components...");
 
-            var items = GetItems(assembly, false);
+            var itemExtractor = new AssemblyItemExtractor(assembly);
+            itemExtractor.TopLevelOnly = false;
+
+            var items = itemExtractor.GetItems();
 
             Print("Found " + items.Count);
             Print("");
@@ -317,6 +325,9 @@ namespace ExportDXF.Forms
             {
                 if (worker.CancellationPending)
                     return;
+
+                if (item.Component == null)
+                    continue;
 
                 var fileName = GetFileName(item);
                 var savepath = Path.Combine(savePath, fileName + ".dxf");
@@ -656,126 +667,6 @@ namespace ExportDXF.Forms
                 (int)swDwgPaperSizes_e.swDwgPaperDsize,
                 1,
                 1) as DrawingDoc;
-        }
-
-        private List<Item> GetItems(BomTableAnnotation bom)
-        {
-            var items = new List<Item>();
-            var table = bom as TableAnnotation;
-            var itemNoColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_ItemNumber);
-
-            if (itemNoColumnIndex == -1)
-            {
-                Print("Error: Item number column not found.");
-                return null;
-            }
-            else
-            {
-                Print("Item numbers are in the " + Helper.GetNumWithSuffix(itemNoColumnIndex + 1) + " column.");
-            }
-
-            var qtyColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_Quantity);
-            if (qtyColumnIndex == -1)
-            {
-                Print("Error: Quantity column not found.");
-                return null;
-            }
-
-            var descriptionColumnIndex = table.IndexOfColumnTitle("Description");
-            if (descriptionColumnIndex == -1)
-            {
-                Print("Error: Description column not found.");
-                return null;
-            }
-
-            var partNoColumnIndex = table.IndexOfColumnType(swTableColumnTypes_e.swBomTableColumnType_PartNumber);
-            if (partNoColumnIndex == -1)
-            {
-                Print("Error: Part number column not found.");
-                return null;
-            }
-
-            var isBOMPartsOnly = bom.BomFeature.TableType == (int)swBomType_e.swBomType_PartsOnly;
-
-            for (int rowIndex = 0; rowIndex < table.RowCount; rowIndex++)
-            {
-                //if (table.RowHidden[rowIndex] == true)
-                //    continue;
-
-                var bomComponents = isBOMPartsOnly ?
-                    ((Array)bom.GetComponents2(rowIndex, bom.BomFeature.Configuration))?.Cast<Component2>() :
-                    ((Array)bom.GetComponents(rowIndex))?.Cast<Component2>();
-
-                if (bomComponents == null)
-                    continue;
-
-                var distinctComponents = bomComponents
-                    .GroupBy(c => c.ReferencedConfiguration)
-                    .Select(group => group.First())
-                    .ToList();
-
-                foreach (var component in bomComponents)
-                {
-                    if (component.IsSuppressed())
-                    {
-                        continue;
-                    }
-
-                    var qtyString = table.DisplayedText[rowIndex, qtyColumnIndex];
-                    int qty = 0;
-
-                    int.TryParse(qtyString, out qty);
-
-                    items.Add(new Item
-                    {
-                        PartName = table.DisplayedText[rowIndex, partNoColumnIndex],
-                        Quantity = qty,
-                        Description = table.DisplayedText[rowIndex, descriptionColumnIndex],
-                        ItemNo = table.DisplayedText[rowIndex, itemNoColumnIndex],
-                        Component = component
-                    });
-
-                    break;
-                }
-            }
-
-            return items;
-        }
-
-        private List<Item> GetItems(AssemblyDoc assembly, bool topLevel)
-        {
-            var list = new List<Item>();
-
-            assembly.ResolveAllLightWeightComponents(false);
-
-            var assemblyComponents = ((Array)assembly.GetComponents(topLevel))
-                .Cast<Component2>()
-                .Where(c => !c.IsHidden(true));
-
-            var componentGroups = assemblyComponents
-                .GroupBy(c => c.GetTitle() + c.ReferencedConfiguration);
-
-            foreach (var group in componentGroups)
-            {
-                var component = group.First();
-
-                var model = component.GetModelDoc2() as ModelDoc2;
-
-                if (model == null)
-                    continue;
-
-                var n1 = Path.GetFileNameWithoutExtension(component.GetTitle());
-                var name = component.ReferencedConfiguration.ToLower() == "default" ? n1 : string.Format("{0} [{1}]", n1, component.ReferencedConfiguration);
-
-                list.Add(new Item
-                {
-                    PartName = name,
-                    Quantity = group.Count(),
-                    Component = component
-                });
-            }
-
-            return list;
         }
 
         private static string DrawingTemplatePath

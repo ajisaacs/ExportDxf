@@ -86,6 +86,7 @@
     <Compile Include="Bounds.cs" />
     <Compile Include="DrawingInfo.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="ItemExtractor.cs" />
     <Compile Include="Forms\ViewFlipDeciderComboboxItem.cs" />
     <Compile Include="Item.cs" />
     <Compile Include="IViewFlipDecider.cs" />
