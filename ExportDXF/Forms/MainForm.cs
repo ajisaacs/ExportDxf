@@ -99,10 +99,6 @@ namespace ExportDXF.Forms
             }
         }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-        }
-
         private void Worker_DoWork(object sender, DoWorkEventArgs e)
         {
             timeStarted = DateTime.Now;
@@ -462,14 +458,6 @@ namespace ExportDXF.Forms
             }
         }
 
-        private string ChangePathExtension(string fullpath, string newExtension)
-        {
-            var dir = Path.GetDirectoryName(fullpath);
-            var name = Path.GetFileNameWithoutExtension(fullpath);
-
-            return Path.Combine(dir, name + newExtension);
-        }
-
         private bool SavePartToDXF(PartDoc part, string savePath)
         {
             var partModel = part as ModelDoc2;
@@ -521,7 +509,7 @@ namespace ExportDXF.Forms
                     view.ShowSheetMetalBendNotes = true;
                 }
 
-                if (ShouldFlipView(view))
+                if (viewFlipDecider.ShouldFlip(view))
                 {
                     Print(partModel.GetTitle() + " - Flipped view", Color.Blue);
                     view.FlipView = true;
@@ -560,7 +548,6 @@ namespace ExportDXF.Forms
             }
 
             return false;
-
         }
 
         private bool HideModelSketches(IView view)
@@ -660,11 +647,6 @@ namespace ExportDXF.Forms
             }));
 
             return path;
-        }
-
-        private bool ShouldFlipView(SolidWorks.Interop.sldworks.View view)
-        {
-            return viewFlipDecider.ShouldFlip(view);
         }
 
         private DrawingDoc CreateDrawing()
