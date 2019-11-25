@@ -4,6 +4,8 @@ namespace ExportDXF
 {
     public class DrawingInfo
     {
+        private static Regex drawingFormatRegex = new Regex(@"(?<jobNo>[34]\d{3}(-\d+\w{1,2})?)\s?(?<dwgNo>[ABEP]\d+(-?(\d+|[A-Z]))?)", RegexOptions.IgnoreCase);
+
         public string JobNo { get; set; }
 
         public string DrawingNo { get; set; }
@@ -30,9 +32,7 @@ namespace ExportDXF
 
         public static DrawingInfo Parse(string input)
         {
-            const string pattern = @"(?<jobNo>[34]\d{3}(-\d+\w{1,2})?)\s?(?<dwgNo>[ABEP]\d+(-?(\d+|[A-Z]))?)";
-
-            var match = Regex.Match(input, pattern);
+            var match = drawingFormatRegex.Match(input);
 
             if (match.Success == false)
                 return null;
