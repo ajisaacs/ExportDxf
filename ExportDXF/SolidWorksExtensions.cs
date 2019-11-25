@@ -2,6 +2,7 @@
 using SolidWorks.Interop.swconst;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ExportDXF
 {
@@ -125,6 +126,16 @@ namespace ExportDXF
         public static Dimension GetDimension(this Feature feature, string dimName)
         {
             return feature?.Parameter(dimName) as Dimension;
+        }
+
+        public static List<BomTableAnnotation> GetBomTables(this DrawingDoc drawing)
+        {
+            var model = drawing as ModelDoc2;
+
+            return model.GetAllFeaturesByTypeName("BomFeat")
+                .Select(f => f.GetSpecificFeature2() as BomFeature)
+                .Select(f => (f.GetTableAnnotations() as Array)?.Cast<BomTableAnnotation>().FirstOrDefault())
+                .ToList();
         }
 
     }

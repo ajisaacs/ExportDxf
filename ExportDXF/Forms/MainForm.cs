@@ -241,7 +241,7 @@ namespace ExportDXF.Forms
         private void ExportToDXF(DrawingDoc drawing)
         {
             Print("Finding BOM tables...");
-            var bomTables = GetBomTables(drawing);
+            var bomTables = drawing.GetBomTables();
 
             if (bomTables.Count == 0)
             {
@@ -249,8 +249,7 @@ namespace ExportDXF.Forms
                 return;
             }
 
-            Print($"Found {bomTables.Count} BOM table(s)");
-            Print("");
+            Print($"Found {bomTables.Count} BOM table(s)\n");
 
             var items = new List<Item>();
 
@@ -675,16 +674,6 @@ namespace ExportDXF.Forms
                 (int)swDwgPaperSizes_e.swDwgPaperDsize,
                 1,
                 1) as DrawingDoc;
-        }
-
-        private List<BomTableAnnotation> GetBomTables(DrawingDoc drawing)
-        {
-            var model = drawing as ModelDoc2;
-
-            return model.GetAllFeaturesByTypeName("BomFeat")
-                .Select(f => f.GetSpecificFeature2() as BomFeature)
-                .Select(f => (f.GetTableAnnotations() as Array)?.Cast<BomTableAnnotation>().FirstOrDefault())
-                .ToList();
         }
 
         private List<Item> GetItems(BomTableAnnotation bom)
