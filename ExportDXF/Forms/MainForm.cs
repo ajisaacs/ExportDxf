@@ -597,7 +597,7 @@ namespace ExportDXF.Forms
                     col++;
                 }
 
-                for (int i = 1; i <= 9; i++)
+                for (int i = 1; i <= 8; i++)
                 {
                     var column = partsSheet.Column(i);
 
