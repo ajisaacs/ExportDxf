@@ -80,32 +80,40 @@ namespace ExportDXF
                 item.Quantity = qty;
             }
 
+            item.Component = GetComponent(rowIndex);
+
+            return item;
+        }
+
+        private Component2 GetComponent(int rowIndex)
+        {
             var isBOMPartsOnly = bom.BomFeature.TableType == (int)swBomType_e.swBomType_PartsOnly;
 
-            List<Component2> components;
+            IEnumerable<Component2> components;
 
             if (isBOMPartsOnly)
             {
-                components = ((Array)bom.GetComponents2(rowIndex, bom.BomFeature.Configuration))?.Cast<Component2>().ToList();
+                components = ((Array)bom.GetComponents2(rowIndex, bom.BomFeature.Configuration))?.Cast<Component2>();
             }
             else
             {
-                components = ((Array)bom.GetComponents(rowIndex))?.Cast<Component2>().ToList();
+                components = ((Array)bom.GetComponents(rowIndex))?.Cast<Component2>();
             }
 
-            if (components != null)
+            if (components == null)
+                return null;
+
+            foreach (var component in components)
             {
-                foreach (var component in components)
-                {
-                    if (component.IsSuppressed())
-                        continue;
+                component.SetLightweightToResolved();
 
-                    item.Component = component;
-                    break;
-                }
+                if (component.IsSuppressed())
+                    continue;
+
+                return component;
             }
 
-            return item;
+            return null;
         }
 
         public List<Item> GetItems()

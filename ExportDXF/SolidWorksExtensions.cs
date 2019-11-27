@@ -1,5 +1,6 @@
 ﻿using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -138,5 +139,21 @@ namespace ExportDXF
                 .ToList();
         }
 
+        public static void SetLightweightToResolved(this Component2 component)
+        {
+            var suppressionState = (swComponentSuppressionState_e)component.GetSuppression();
+
+            switch (suppressionState)
+            {
+                case swComponentSuppressionState_e.swComponentFullyResolved:
+                case swComponentSuppressionState_e.swComponentResolved:
+                    return;
+
+                case swComponentSuppressionState_e.swComponentFullyLightweight:
+                case swComponentSuppressionState_e.swComponentLightweight:
+                    var error = (swSuppressionError_e)component.SetSuppression2((int)swComponentSuppressionState_e.swComponentResolved);
+                    break;
+            }
+        }
     }
 }

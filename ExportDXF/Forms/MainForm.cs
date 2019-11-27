@@ -257,7 +257,6 @@ namespace ExportDXF.Forms
                 var itemExtractor = new BomItemExtractor(bom);
                 itemExtractor.SkipHiddenRows = true;
 
-                Print(bom.BomFeature.Name);
                 Print($"Fetching components from {bom.BomFeature.Name}");
 
                 var bomItems = itemExtractor.GetItems();
@@ -332,7 +331,7 @@ namespace ExportDXF.Forms
                 var fileName = GetFileName(item);
                 var savepath = Path.Combine(savePath, fileName + ".dxf");
 
-                SetLightweightToResolved(item.Component);
+                item.Component.SetLightweightToResolved();
 
                 var model = item.Component.GetModelDoc2() as ModelDoc2;
                 var part = model as PartDoc;
@@ -403,37 +402,6 @@ namespace ExportDXF.Forms
             catch (Exception ex)
             {
                 Print(ex.Message, Color.Red);
-            }
-        }
-
-        private void SetLightweightToResolved(Component2 component)
-        {
-            var isSuppressed = component.IsSuppressed();
-
-            if (isSuppressed)
-                return;
-            var suppressionState = (swComponentSuppressionState_e)component.GetSuppression();
-
-            switch (suppressionState)
-            {
-                case swComponentSuppressionState_e.swComponentFullyResolved:
-                case swComponentSuppressionState_e.swComponentResolved:
-                    return;
-
-                case swComponentSuppressionState_e.swComponentFullyLightweight:
-                case swComponentSuppressionState_e.swComponentLightweight:
-                    var error = (swSuppressionError_e)component.SetSuppression2((int)swComponentSuppressionState_e.swComponentResolved);
-
-                    if (error == swSuppressionError_e.swSuppressionChangeOk)
-                    {
-                        var model = component.GetModelDoc2() as ModelDoc2;
-
-                        if (model != null)
-                        {
-                            model.ForceRebuild3(false);
-                        }
-                    }
-                    break;
             }
         }
 
