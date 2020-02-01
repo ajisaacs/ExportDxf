@@ -271,6 +271,8 @@ namespace ExportDXF.Forms
         {
             var prefix = prefixTextBox.Text;
             var model = part as ModelDoc2;
+            var activeConfig = ((Configuration)model.GetActiveConfiguration()).Name;
+
             var dir = UserSelectFolder();
 
             if (dir == null)
@@ -288,6 +290,8 @@ namespace ExportDXF.Forms
             var savePath = Path.Combine(dir, prefix + name + ".dxf");
 
             SavePartToDXF(part, savePath);
+
+            model.ShowConfiguration(activeConfig);
         }
 
         private void ExportToDXF(AssemblyDoc assembly)
@@ -497,7 +501,6 @@ namespace ExportDXF.Forms
                 drawingModel.SaveAs(savePath);
 
                 Print(partModel.GetTitle() + " - Saved to \"" + savePath + "\"", Color.Green);
-                
 
                 drawingModel.SelectByName(0, view.Name);
                 drawingModel.DeleteSelection(false);
