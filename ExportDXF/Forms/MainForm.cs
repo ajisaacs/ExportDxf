@@ -584,6 +584,7 @@ namespace ExportDXF.Forms
                     partsSheet.Cells[row, col++].Value = item.Quantity;
                     partsSheet.Cells[row, col++].Value = item.Description;
                     partsSheet.Cells[row, col++].Value = item.PartName;
+                    partsSheet.Cells[row, col++].Value = item.Configuration;
 
                     if (item.Thickness > 0)
                         partsSheet.Cells[row, col].Value = item.Thickness;

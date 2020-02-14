@@ -10,6 +10,8 @@ namespace ExportDXF
 
         public string PartName { get; set; }
 
+        public string Configuration { get; set; }
+
         public int Quantity { get; set; }
 
         public string Description { get; set; }

@@ -81,6 +81,7 @@ namespace ExportDXF
             }
 
             item.Component = GetComponent(rowIndex);
+            item.Configuration = item.Component.ReferencedConfiguration;
 
             return item;
         }
@@ -185,7 +186,8 @@ namespace ExportDXF
                 {
                     PartName = name,
                     Quantity = group.Count(),
-                    Component = component
+                    Component = component,
+                    Configuration = component.ReferencedConfiguration
                 });
             }
 
