@@ -500,6 +500,8 @@ namespace ExportDXF.Forms
 
                 drawingModel.SaveAs(savePath);
 
+                EtchBendLines.Program.AddEtchLines(savePath);
+
                 Print(partModel.GetTitle() + " - Saved to \"" + savePath + "\"", Color.Green);
 
                 drawingModel.SelectByName(0, view.Name);

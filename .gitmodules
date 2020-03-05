@@ -1,0 +1,3 @@
+[submodule "EtchBendLines"]
+	path = EtchBendLines
+	url = https://git.nforge.net/aj/etchbendlines.git
