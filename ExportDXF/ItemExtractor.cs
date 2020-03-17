@@ -81,7 +81,11 @@ namespace ExportDXF
             }
 
             item.Component = GetComponent(rowIndex);
-            item.Configuration = item.Component.ReferencedConfiguration;
+
+            if (item.Component != null)
+            {
+                item.Configuration = item.Component.ReferencedConfiguration;
+            }
 
             return item;
         }
