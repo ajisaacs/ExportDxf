@@ -471,6 +471,10 @@ namespace ExportDXF.Forms
                 Print(partModel.GetTitle() + " - Creating flat pattern.");
                 SolidWorks.Interop.sldworks.View view;
                 view = templateDrawing.CreateFlatPatternViewFromModelView3(partModel.GetPathName(), partConfiguration, 0, 0, 0, false, false);
+
+                if (view == null)
+                    return false;
+
                 view.ShowSheetMetalBendNotes = true;
 
                 var drawingModel = templateDrawing as ModelDoc2;
