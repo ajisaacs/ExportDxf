@@ -527,11 +527,18 @@ namespace ExportDXF.Forms
             model.ShowConfiguration(refConfig);
 
             var flatPattern = model.GetFeatureByTypeName("FlatPattern");
+
+            if (flatPattern.IsSuppressed())
+            {
+                return true;
+            }
+
             var bends = flatPattern.GetAllSubFeaturesByTypeName("UiBend");
 
             foreach (var bend in bends)
             {
-                if (bend.IsSuppressed())
+                var isSuppressed = bend.IsSuppressed();
+                if (isSuppressed)
                     return true;
             }
 
