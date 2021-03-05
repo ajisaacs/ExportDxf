@@ -234,6 +234,26 @@ namespace ExportDXF.Forms
             }
         }
 
+        private void ExportDrawingToPDF(DrawingDoc drawingDoc)
+        {
+            var model = drawingDoc as ModelDoc2;
+            var pdfPath = model.GetPathName();
+            var ext = Path.GetExtension(pdfPath);
+            pdfPath = pdfPath.Remove(pdfPath.Length - ext.Length) + ".pdf";
+
+            var exportData = sldWorks.GetExportFileData((int)swExportDataFileType_e.swExportPdfData) as ExportPdfData;
+            exportData.ViewPdfAfterSaving = false;
+            exportData.SetSheets((int)swExportDataSheetsToExport_e.swExportData_ExportAllSheets, drawingDoc);
+
+            int errors = 0;
+            int warnings = 0;
+
+            var modelExtension = model.Extension;
+            modelExtension.SaveAs(pdfPath, (int)swSaveAsVersion_e.swSaveAsCurrentVersion, (int)swSaveAsOptions_e.swSaveAsOptions_Silent, exportData, ref errors, ref warnings);
+
+            Print("Saved drawing to PDF file \"" + pdfPath + "\"", Color.Green);
+        }
+
         private void ExportToDXF(DrawingDoc drawing)
         {
             Print("Finding BOM tables...");
@@ -264,6 +284,8 @@ namespace ExportDXF.Forms
             }
 
             Print($"Found {items.Count} component(s)");
+
+            ExportDrawingToPDF(drawing);
             ExportToDXF(items);
         }
 
@@ -584,7 +606,10 @@ namespace ExportDXF.Forms
                 var dlg = new FolderBrowserDialog();
                 dlg.Description = "Where do you want to save the DXF files?";
 
-                path = dlg.ShowDialog() == DialogResult.OK ? dlg.SelectedPath : null;
+                if (dlg.ShowDialog() != DialogResult.OK)
+                    throw new Exception("Export canceled by user.");
+
+                path = dlg.SelectedPath;
             }));
 
             return path;
