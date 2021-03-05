@@ -401,7 +401,9 @@ namespace ExportDXF.Forms
                 var drawingInfo = DrawingInfo.Parse(prefix);
                 var bomName = drawingInfo != null ? string.Format("{0} {1} BOM", drawingInfo.JobNo, drawingInfo.DrawingNo) : "BOM";
                 var bomFile = Path.Combine(savePath, bomName + ".xlsx");
-                CreateBOMExcelFile(bomFile, items.ToList());
+
+                var excelReport = new ExportBomToExcel();
+                excelReport.CreateBOMExcelFile(bomFile, items.ToList());
             }
             catch (Exception ex)
             {
@@ -571,63 +573,6 @@ namespace ExportDXF.Forms
             model.ShowConfiguration(activeConfig);
 
             return modelChanged;
-        }
-
-        private void CreateBOMExcelFile(string filepath, IList<Item> items)
-        {
-            var templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates", "BomTemplate.xlsx");
-
-            File.Copy(templatePath, filepath, true);
-
-            var newFile = new FileInfo(filepath);
-
-            using (var pkg = new ExcelPackage(newFile))
-            {
-                var workbook = pkg.Workbook;
-                var partsSheet = workbook.Worksheets["Parts"];
-
-                for (int i = 0; i < items.Count; i++)
-                {
-                    var item = items[i];
-                    var row = i + 2;
-                    var col = 1;
-
-                    partsSheet.Cells[row, col++].Value = item.ItemNo;
-                    partsSheet.Cells[row, col++].Value = item.FileName;
-                    partsSheet.Cells[row, col++].Value = item.Quantity;
-                    partsSheet.Cells[row, col++].Value = item.Description;
-                    partsSheet.Cells[row, col++].Value = item.PartName;
-                    partsSheet.Cells[row, col++].Value = item.Configuration;
-
-                    if (item.Thickness > 0)
-                        partsSheet.Cells[row, col].Value = item.Thickness;
-                    col++;
-
-                    partsSheet.Cells[row, col++].Value = item.Material;
-
-                    if (item.KFactor > 0)
-                        partsSheet.Cells[row, col].Value = item.KFactor;
-                    col++;
-
-                    if (item.BendRadius > 0)
-                        partsSheet.Cells[row, col].Value = item.BendRadius;
-                    col++;
-                }
-
-                for (int i = 1; i <= 8; i++)
-                {
-                    var column = partsSheet.Column(i);
-
-                    if (column.Style.WrapText)
-                        continue;
-
-                    column.AutoFit();
-                    column.Width += 1;
-                }
-
-                workbook.Calculate();
-                pkg.Save();
-            }
         }
 
         private string UserSelectFolder()
