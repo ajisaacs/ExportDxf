@@ -424,7 +424,7 @@ namespace ExportDXF.Forms
                 var bomName = drawingInfo != null ? string.Format("{0} {1} BOM", drawingInfo.JobNo, drawingInfo.DrawingNo) : "BOM";
                 var bomFile = Path.Combine(savePath, bomName + ".xlsx");
 
-                var excelReport = new ExportBomToExcel();
+                var excelReport = new BomToExcel();
                 excelReport.CreateBOMExcelFile(bomFile, items.ToList());
             }
             catch (Exception ex)

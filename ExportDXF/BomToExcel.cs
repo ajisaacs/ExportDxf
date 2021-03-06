@@ -5,7 +5,7 @@ using System.IO;
 
 namespace ExportDXF
 {
-    public class ExportBomToExcel
+    public class BomToExcel
     {
         public string TemplatePath
         {

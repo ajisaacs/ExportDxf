@@ -92,7 +92,7 @@
     <Compile Include="BendOrientation.cs" />
     <Compile Include="Bounds.cs" />
     <Compile Include="DrawingInfo.cs" />
-    <Compile Include="ExportBomToExcel.cs" />
+    <Compile Include="BomToExcel.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="ItemExtractor.cs" />
     <Compile Include="Forms\ViewFlipDeciderComboboxItem.cs" />
