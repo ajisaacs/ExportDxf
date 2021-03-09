@@ -528,7 +528,8 @@ namespace ExportDXF.Forms
 
                 drawingModel.SaveAs(savePath);
 
-                EtchBendLines.Program.AddEtchLines(savePath);
+                var etcher = new EtchBendLines.Etcher();
+                etcher.AddEtchLines(savePath);
 
                 Print(partModel.GetTitle() + " - Saved to \"" + savePath + "\"", Color.Green);
 
