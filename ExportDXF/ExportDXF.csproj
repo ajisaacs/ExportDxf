@@ -100,7 +100,9 @@
     <Compile Include="ItemExtractors\ItemExtractor.cs" />
     <Compile Include="Forms\ViewFlipDeciderComboboxItem.cs" />
     <Compile Include="Item.cs" />
-    <Compile Include="IViewFlipDecider.cs" />
+    <Compile Include="ViewFlipDeciders\AskViewFlipDecider.cs" />
+    <Compile Include="ViewFlipDeciders\AutoViewFlipDecider.cs" />
+    <Compile Include="ViewFlipDeciders\IViewFlipDecider.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
@@ -112,6 +114,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SolidWorksExtensions.cs" />
     <Compile Include="Units.cs" />
+    <Compile Include="ViewFlipDeciders\PreferUpViewFlipDecider.cs" />
     <Compile Include="ViewHelper.cs" />
     <EmbeddedResource Include="Forms\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>

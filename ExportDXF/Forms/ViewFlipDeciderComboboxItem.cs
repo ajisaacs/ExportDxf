@@ -1,4 +1,6 @@
-﻿namespace ExportDXF.Forms
+﻿using ExportDXF.ViewFlipDeciders;
+
+namespace ExportDXF.Forms
 {
     public class ViewFlipDeciderComboboxItem
     {
