@@ -294,7 +294,9 @@ namespace ExportDXF.Forms
 
             Print($"Found {items.Count} component(s)");
 
-            ExportDrawingToPDF(drawing);
+            var savePath = GetPdfSavePath(drawing);
+
+            ExportDrawingToPDF(drawing, savePath);
             ExportToDXF(items);
         }
 
