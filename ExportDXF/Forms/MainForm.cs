@@ -236,12 +236,19 @@ namespace ExportDXF.Forms
             }
         }
 
-        private void ExportDrawingToPDF(DrawingDoc drawingDoc)
+        private string GetPdfSavePath(DrawingDoc drawingDoc)
         {
             var model = drawingDoc as ModelDoc2;
             var pdfPath = model.GetPathName();
             var ext = Path.GetExtension(pdfPath);
             pdfPath = pdfPath.Remove(pdfPath.Length - ext.Length) + ".pdf";
+
+            return pdfPath;
+        }
+
+        private void ExportDrawingToPDF(DrawingDoc drawingDoc, string savePath)
+        {
+            var model = drawingDoc as ModelDoc2;
 
             var exportData = sldWorks.GetExportFileData((int)swExportDataFileType_e.swExportPdfData) as ExportPdfData;
             exportData.ViewPdfAfterSaving = false;
@@ -251,9 +258,9 @@ namespace ExportDXF.Forms
             int warnings = 0;
 
             var modelExtension = model.Extension;
-            modelExtension.SaveAs(pdfPath, (int)swSaveAsVersion_e.swSaveAsCurrentVersion, (int)swSaveAsOptions_e.swSaveAsOptions_Silent, exportData, ref errors, ref warnings);
+            modelExtension.SaveAs(savePath, (int)swSaveAsVersion_e.swSaveAsCurrentVersion, (int)swSaveAsOptions_e.swSaveAsOptions_Silent, exportData, ref errors, ref warnings);
 
-            Print("Saved drawing to PDF file \"" + pdfPath + "\"", Color.Green);
+            Print($"Saved drawing to PDF file \"{savePath}\"", Color.Green);
         }
 
         private void ExportToDXF(DrawingDoc drawing)
@@ -327,9 +334,7 @@ namespace ExportDXF.Forms
 
             var items = itemExtractor.GetItems();
 
-            Print("Found " + items.Count);
-            Print("");
-
+            Print($"Found {items.Count} item(s).\n");
             ExportToDXF(items);
         }
 
@@ -423,7 +428,7 @@ namespace ExportDXF.Forms
             try
             {
                 var drawingInfo = DrawingInfo.Parse(prefix);
-                var bomName = drawingInfo != null ? string.Format("{0} {1} BOM", drawingInfo.JobNo, drawingInfo.DrawingNo) : "BOM";
+                var bomName = drawingInfo != null ? $"{drawingInfo.JobNo} {drawingInfo.DrawingNo} BOM" : "BOM";
                 var bomFile = Path.Combine(savePath, bomName + ".xlsx");
 
                 var excelReport = new BomToExcel();
