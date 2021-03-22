@@ -1,4 +1,5 @@
 ﻿using SolidWorks.Interop.sldworks;
+using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -268,6 +269,34 @@ namespace ExportDXF
         public static double RadiansToDegrees(double angleInRadians)
         {
             return Math.Round(angleInRadians * 180.0 / Math.PI, 8);
+        }
+
+        public static bool HideModelSketches(IView view)
+        {
+            var model = view.ReferencedDocument;
+            var activeConfig = ((Configuration)model.GetActiveConfiguration()).Name;
+
+            var modelChanged = false;
+            var refConfig = view.ReferencedConfiguration;
+            model.ShowConfiguration(refConfig);
+
+            var sketches = model.GetAllFeaturesByTypeName("ProfileFeature");
+
+            foreach (var sketch in sketches)
+            {
+                var visible = (swVisibilityState_e)sketch.Visible;
+
+                if (visible == swVisibilityState_e.swVisibilityStateShown)
+                {
+                    sketch.Select2(true, -1);
+                    model.BlankSketch();
+                    modelChanged = true;
+                }
+            }
+
+            model.ShowConfiguration(activeConfig);
+
+            return modelChanged;
         }
     }
 }

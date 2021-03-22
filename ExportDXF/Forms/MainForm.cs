@@ -1,4 +1,5 @@
 ﻿using ExportDXF.ItemExtractors;
+using ExportDXF.ViewFlipDeciders;
 using OfficeOpenXml;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
@@ -569,34 +570,6 @@ namespace ExportDXF.Forms
             }
 
             return false;
-        }
-
-        private bool HideModelSketches(IView view)
-        {
-            var model = view.ReferencedDocument;
-            var activeConfig = ((Configuration)model.GetActiveConfiguration()).Name;
-
-            var modelChanged = false;
-            var refConfig = view.ReferencedConfiguration;
-            model.ShowConfiguration(refConfig);
-
-            var sketches = model.GetAllFeaturesByTypeName("ProfileFeature");
-
-            foreach (var sketch in sketches)
-            {
-                var visible = (swVisibilityState_e)sketch.Visible;
-
-                if (visible == swVisibilityState_e.swVisibilityStateShown)
-                {
-                    sketch.Select2(true, -1);
-                    model.BlankSketch();
-                    modelChanged = true;
-                }
-            }
-
-            model.ShowConfiguration(activeConfig);
-
-            return modelChanged;
         }
 
         private string UserSelectFolder()
