@@ -94,7 +94,10 @@
     <Compile Include="DrawingInfo.cs" />
     <Compile Include="BomToExcel.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="ItemExtractor.cs" />
+    <Compile Include="ItemExtractors\AssemblyItemExtractor.cs" />
+    <Compile Include="ItemExtractors\BomColumnIndices.cs" />
+    <Compile Include="ItemExtractors\BomItemExtractor.cs" />
+    <Compile Include="ItemExtractors\ItemExtractor.cs" />
     <Compile Include="Forms\ViewFlipDeciderComboboxItem.cs" />
     <Compile Include="Item.cs" />
     <Compile Include="IViewFlipDecider.cs" />
