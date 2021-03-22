@@ -506,12 +506,12 @@ namespace ExportDXF.Forms
                 var drawingModel = templateDrawing as ModelDoc2;
                 drawingModel.ViewZoomtofit2();
 
-                if (HasSupressedBends(view))
+                if (ViewHelper.HasSupressedBends(view))
                 {
                     Print("A bend is suppressed, please check flat pattern!", Color.Red);
                 }
 
-                if (HideModelSketches(view))
+                if (ViewHelper.HideModelSketches(view))
                 {
                     // delete the current view that has sketches shown
                     drawingModel.SelectByName(0, view.Name);
@@ -545,31 +545,6 @@ namespace ExportDXF.Forms
                 MessageBox.Show(ex.Message);
                 return false;
             }
-        }
-
-        private bool HasSupressedBends(IView view)
-        {
-            var model = view.ReferencedDocument;
-            var refConfig = view.ReferencedConfiguration;
-            model.ShowConfiguration(refConfig);
-
-            var flatPattern = model.GetFeatureByTypeName("FlatPattern");
-
-            if (flatPattern.IsSuppressed())
-            {
-                return true;
-            }
-
-            var bends = flatPattern.GetAllSubFeaturesByTypeName("UiBend");
-
-            foreach (var bend in bends)
-            {
-                var isSuppressed = bend.IsSuppressed();
-                if (isSuppressed)
-                    return true;
-            }
-
-            return false;
         }
 
         private string UserSelectFolder()

@@ -298,5 +298,30 @@ namespace ExportDXF
 
             return modelChanged;
         }
+
+        public static bool HasSupressedBends(IView view)
+        {
+            var model = view.ReferencedDocument;
+            var refConfig = view.ReferencedConfiguration;
+            model.ShowConfiguration(refConfig);
+
+            var flatPattern = model.GetFeatureByTypeName("FlatPattern");
+
+            if (flatPattern.IsSuppressed())
+            {
+                return true;
+            }
+
+            var bends = flatPattern.GetAllSubFeaturesByTypeName("UiBend");
+
+            foreach (var bend in bends)
+            {
+                var isSuppressed = bend.IsSuppressed();
+                if (isSuppressed)
+                    return true;
+            }
+
+            return false;
+        }
     }
 }
