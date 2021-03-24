@@ -40,8 +40,6 @@ namespace ExportDXF.Forms
 
             comboBox1.DataSource = GetItems();
             comboBox1.DisplayMember = "Name";
-
-            //viewFlipDecider = new AskViewFlipDecider();
         }
 
         protected override void OnLoad(EventArgs e)
@@ -82,6 +80,14 @@ namespace ExportDXF.Forms
                     Name = obj.Name,
                     ViewFlipDecider = obj
                 });
+            }
+
+            var automatic = items.FirstOrDefault(i => i.Name == "Automatic");
+
+            if (automatic != null)
+            {
+                items.Remove(automatic);
+                items.Insert(0, automatic);
             }
 
             return items;
