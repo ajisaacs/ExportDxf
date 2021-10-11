@@ -597,16 +597,20 @@ namespace ExportDXF.Forms
             var model = sldWorks.ActiveDoc as ModelDoc2;
             var isDrawing = model is DrawingDoc;
 
-            if (!isDrawing)
-                return;
+            if (isDrawing)
+            {
+                var drawingInfo = DrawingInfo.Parse(activeDocTitleBox.Text);
 
-            var drawingInfo = DrawingInfo.Parse(activeDocTitleBox.Text);
+                if (drawingInfo == null)
+                    return;
 
-            if (drawingInfo == null)
-                return;
-
-            prefixTextBox.Text = string.Format("{0} {1} PT", drawingInfo.JobNo, drawingInfo.DrawingNo);
-            prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
+                prefixTextBox.Text = $"{drawingInfo.JobNo} {drawingInfo.DrawingNo} PT";
+                prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
+            }
+            else
+            {
+                prefixTextBox.Text = string.Empty;
+            }
         }
     }
 }
