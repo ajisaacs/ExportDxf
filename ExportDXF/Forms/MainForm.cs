@@ -166,17 +166,11 @@ namespace ExportDXF.Forms
 
         private int SldWorks_ActiveModelDocChangeNotify()
         {
-            if (InvokeRequired)
-            {
-                Invoke(new MethodInvoker(() =>
-                {
-                    SetActiveDocName();
-                }));
-            }
-            else
+            Invoke(new MethodInvoker(() =>
             {
                 SetActiveDocName();
-            }
+                UpdatePrefix();
+            }));
 
             return 1;
         }
@@ -600,6 +594,32 @@ namespace ExportDXF.Forms
             if (isDrawing)
             {
                 var drawingInfo = DrawingInfo.Parse(activeDocTitleBox.Text);
+
+                if (drawingInfo == null)
+                    return;
+
+                prefixTextBox.Text = $"{drawingInfo.JobNo} {drawingInfo.DrawingNo} PT";
+                prefixTextBox.SelectionStart = prefixTextBox.Text.Length;
+            }
+            else
+            {
+                prefixTextBox.Text = string.Empty;
+            }
+        }
+
+        private void UpdatePrefix()
+        {
+            var model = sldWorks.ActiveDoc as ModelDoc2;
+
+            if (model == null)
+                return;
+
+            var isDrawing = model is DrawingDoc;
+            var title = model.GetTitle();
+
+            if (isDrawing)
+            {
+                var drawingInfo = DrawingInfo.Parse(title);
 
                 if (drawingInfo == null)
                     return;
