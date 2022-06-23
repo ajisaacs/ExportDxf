@@ -283,12 +283,11 @@ namespace ExportDXF.Forms
                 if (worker.CancellationPending)
                     return;
 
-                var itemExtractor = new BomItemExtractor(bom);
-                itemExtractor.SkipHiddenRows = true;
+                var bomItems = GetItems(bom);
 
-                Print($"Fetching components from {bom.BomFeature.Name}");
+                if (bomItems == null)
+                    return;
 
-                var bomItems = itemExtractor.GetItems();
                 items.AddRange(bomItems);
             }
 
@@ -298,6 +297,25 @@ namespace ExportDXF.Forms
 
             ExportDrawingToPDF(drawing, savePath);
             ExportToDXF(items);
+        }
+
+        private List<Item> GetItems(BomTableAnnotation bom)
+        {
+            try
+            {
+                var itemExtractor = new BomItemExtractor(bom);
+                itemExtractor.SkipHiddenRows = true;
+
+                Print($"Fetching components from {bom.BomFeature.Name}");
+
+                return itemExtractor.GetItems();
+            }
+            catch (Exception ex)
+            {
+                Print($"Failed to get items from BOM. {ex.Message}", Color.Red);
+            }
+
+            return null;
         }
 
         private void ExportToDXF(PartDoc part)
