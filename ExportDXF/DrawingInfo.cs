@@ -4,7 +4,7 @@ namespace ExportDXF
 {
     public class DrawingInfo
     {
-        private static Regex drawingFormatRegex = new Regex(@"(?<jobNo>[34]\d{3}(-\d+\w{1,2})?)\s?(?<dwgNo>[ABEP]\d+(-?(\d+[A-Z]?))?)", RegexOptions.IgnoreCase);
+        private static Regex drawingFormatRegex = new Regex(@"(?<jobNo>[345]\d{3}(-\d+\w{1,2})?)\s?(?<dwgNo>[ABEP]\d+(-?(\d+[A-Z]?))?)", RegexOptions.IgnoreCase);
 
         public string JobNo { get; set; }
 
