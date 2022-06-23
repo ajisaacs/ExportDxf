@@ -236,14 +236,13 @@ namespace ExportDXF.Forms
             }
         }
 
-        private string GetPdfSavePath(DrawingDoc drawingDoc)
+        private string GetPdfFileName(DrawingDoc drawingDoc)
         {
             var model = drawingDoc as ModelDoc2;
-            var pdfPath = model.GetPathName();
-            var ext = Path.GetExtension(pdfPath);
-            pdfPath = pdfPath.Remove(pdfPath.Length - ext.Length) + ".pdf";
+            var modelFilePath = model.GetPathName();
+            var pdfFileName = Path.GetFileNameWithoutExtension(modelFilePath) + ".pdf";
 
-            return pdfPath;
+            return pdfFileName;
         }
 
         private void ExportDrawingToPDF(DrawingDoc drawingDoc, string savePath)
@@ -293,10 +292,19 @@ namespace ExportDXF.Forms
 
             Print($"Found {items.Count} component(s)");
 
-            var savePath = GetPdfSavePath(drawing);
+            var saveDirectory = UserSelectFolder();
 
-            ExportDrawingToPDF(drawing, savePath);
-            ExportToDXF(items);
+            if (saveDirectory == null)
+            {
+                Print("Canceled\n", Color.Red);
+                return;
+            }
+
+            var pdfName = GetPdfFileName(drawing);
+            var pdfPath = Path.Combine(saveDirectory, pdfName);
+
+            ExportDrawingToPDF(drawing, pdfPath);
+            ExportToDXF(items, saveDirectory);
         }
 
         private List<Item> GetItems(BomTableAnnotation bom)
@@ -355,19 +363,26 @@ namespace ExportDXF.Forms
             var items = itemExtractor.GetItems();
 
             Print($"Found {items.Count} item(s).\n");
-            ExportToDXF(items);
-        }
 
-        private void ExportToDXF(IEnumerable<Item> items)
-        {
-            var savePath = UserSelectFolder();
-            var prefix = prefixTextBox.Text;
+            var saveDirectory = UserSelectFolder();
 
-            if (savePath == null)
+            if (saveDirectory == null)
             {
                 Print("Canceled\n", Color.Red);
                 return;
             }
+
+            ExportToDXF(items, saveDirectory);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="items"></param>
+        /// <param name="saveDirectory">Directory to save the DXF file in.</param>
+        private void ExportToDXF(IEnumerable<Item> items, string saveDirectory)
+        {
+            var prefix = prefixTextBox.Text;
 
             templateDrawing = CreateDrawing();
 
@@ -382,7 +397,7 @@ namespace ExportDXF.Forms
                     continue;
 
                 var fileName = GetFileName(item);
-                var savepath = Path.Combine(savePath, fileName + ".dxf");
+                var savepath = Path.Combine(saveDirectory, fileName + ".dxf");
 
                 item.Component.SetLightweightToResolved();
 
@@ -449,7 +464,7 @@ namespace ExportDXF.Forms
             {
                 var drawingInfo = DrawingInfo.Parse(prefix);
                 var bomName = drawingInfo != null ? $"{drawingInfo.JobNo} {drawingInfo.DrawingNo} BOM" : "BOM";
-                var bomFile = Path.Combine(savePath, bomName + ".xlsx");
+                var bomFile = Path.Combine(saveDirectory, bomName + ".xlsx");
 
                 var excelReport = new BomToExcel();
                 excelReport.CreateBOMExcelFile(bomFile, items.ToList());
