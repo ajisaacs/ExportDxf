@@ -1,4 +1,7 @@
-﻿namespace ExportDXF
+﻿using SolidWorks.Interop.sldworks;
+using System.Diagnostics;
+
+namespace ExportDXF
 {
     public static class Helper
     {
@@ -16,6 +19,17 @@
                 case 3: return i.ToString() + "rd";
                 default: return i.ToString() + "th";
             }
+        }
+
+        public static void UncheckFlatPatternCornerTreatment(ModelDoc2 model)
+        {
+            var flatPattern = model.GetFeatureByTypeName("FlatPattern");
+            var flatPatternFeatureData = flatPattern.GetDefinition() as FlatPatternFeatureData;
+
+            flatPatternFeatureData.CornerTreatment = false;
+            flatPatternFeatureData.SimplifyBends = false;
+
+            var ret = flatPattern.ModifyDefinition(flatPatternFeatureData, model, null);
         }
     }
 }

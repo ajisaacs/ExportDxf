@@ -530,6 +530,8 @@ namespace ExportDXF.Forms
                 if (templateDrawing == null)
                     templateDrawing = CreateDrawing();
 
+                Helper.UncheckFlatPatternCornerTreatment(partModel);
+
                 var sheet = templateDrawing.IGetCurrentSheet();
                 var modelName = Path.GetFileNameWithoutExtension(partModel.GetPathName());
                 sheet.SetName(modelName);
