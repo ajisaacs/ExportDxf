@@ -27,7 +27,7 @@ namespace ExportDXF
             var flatPatternFeatureData = flatPattern.GetDefinition() as FlatPatternFeatureData;
 
             flatPatternFeatureData.CornerTreatment = false;
-            flatPatternFeatureData.SimplifyBends = false;
+            flatPatternFeatureData.SimplifyBends = true;
 
             var ret = flatPattern.ModifyDefinition(flatPatternFeatureData, model, null);
         }

@@ -56,10 +56,10 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.richTextBox1.BackColor = System.Drawing.Color.White;
-            this.richTextBox1.Location = new System.Drawing.Point(12, 119);
+            this.richTextBox1.Location = new System.Drawing.Point(12, 106);
             this.richTextBox1.Name = "richTextBox1";
             this.richTextBox1.ReadOnly = true;
-            this.richTextBox1.Size = new System.Drawing.Size(754, 329);
+            this.richTextBox1.Size = new System.Drawing.Size(754, 342);
             this.richTextBox1.TabIndex = 3;
             this.richTextBox1.Text = "";
             // 
