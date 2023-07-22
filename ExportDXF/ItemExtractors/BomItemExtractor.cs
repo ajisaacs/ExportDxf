@@ -51,22 +51,42 @@ namespace ExportDXF.ItemExtractors
 
             if (columnIndices.ItemNumber != -1)
             {
-                item.ItemNo = table.DisplayedText[rowIndex, columnIndices.ItemNumber];
+                var x = table.DisplayedText[rowIndex, columnIndices.ItemNumber];
+                x = Helper.RemoveXmlTags(x);
+
+                double d;
+
+                if (double.TryParse(x, out d))
+                {
+                    item.ItemNo = d.ToString();
+                }
+                else
+                {
+                    item.ItemNo = x;
+                }
             }
 
             if (columnIndices.PartNumber != -1)
             {
-                item.PartName = table.DisplayedText[rowIndex, columnIndices.PartNumber];
+                var x = table.DisplayedText[rowIndex, columnIndices.PartNumber];
+                x = Helper.RemoveXmlTags(x);
+
+                item.PartName = x;
+
             }
 
             if (columnIndices.Description != -1)
             {
-                item.Description = table.DisplayedText[rowIndex, columnIndices.Description];
+                var x = table.DisplayedText[rowIndex, columnIndices.Description];
+                x = Helper.RemoveXmlTags(x);
+
+                item.Description = x;
             }
 
             if (columnIndices.Quantity != -1)
             {
                 var qtyString = table.DisplayedText[rowIndex, columnIndices.Quantity];
+                qtyString = Helper.RemoveXmlTags(qtyString);
 
                 int qty = 0;
                 int.TryParse(qtyString, out qty);
