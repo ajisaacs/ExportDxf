@@ -1,5 +1,7 @@
 ﻿using SolidWorks.Interop.sldworks;
+using SolidWorks.Interop.swconst;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace ExportDXF
 {
@@ -31,5 +33,29 @@ namespace ExportDXF
 
             var ret = flatPattern.ModifyDefinition(flatPatternFeatureData, model, null);
         }
+
+        public static bool SetFlatPatternSuppressionState(ModelDoc2 model, swComponentSuppressionState_e suppressionState)
+        {
+            
+
+            var flatPattern = model.GetFeatureByTypeName("FlatPattern");
+
+            flatPattern.SetSuppression((int)suppressionState);
+
+            return flatPattern.IsSuppressed();
+        }
+
+        public static string RemoveXmlTags(string input)
+        {
+            // Define the regular expression pattern to match XML tags
+            string pattern = @"<[^>]+>";
+
+            // Replace all matches of the pattern with an empty string
+            string result = Regex.Replace(input, pattern, "");
+
+            return result;
+        }
+
+
     }
 }

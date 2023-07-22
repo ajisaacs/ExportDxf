@@ -548,9 +548,12 @@ namespace ExportDXF.Forms
                 var drawingModel = templateDrawing as ModelDoc2;
                 drawingModel.ViewZoomtofit2();
 
+                var flatPatternModel = ViewHelper.GetModelFromView(view);
+                Helper.SetFlatPatternSuppressionState(flatPatternModel, swComponentSuppressionState_e.swComponentFullyResolved);
+                
                 if (ViewHelper.HasSupressedBends(view))
                 {
-                    Print("A bend is suppressed, please check flat pattern!", Color.Red);
+                    Print("A bend is suppressed, please check flat pattern", Color.Red);
                 }
 
                 if (ViewHelper.HideModelSketches(view))

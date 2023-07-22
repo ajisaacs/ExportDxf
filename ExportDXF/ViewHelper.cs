@@ -301,17 +301,8 @@ namespace ExportDXF
 
         public static bool HasSupressedBends(IView view)
         {
-            var model = view.ReferencedDocument;
-            var refConfig = view.ReferencedConfiguration;
-            model.ShowConfiguration(refConfig);
-
+            var model = GetModelFromView(view);
             var flatPattern = model.GetFeatureByTypeName("FlatPattern");
-
-            if (flatPattern.IsSuppressed())
-            {
-                return true;
-            }
-
             var bends = flatPattern.GetAllSubFeaturesByTypeName("UiBend");
 
             foreach (var bend in bends)
@@ -322,6 +313,15 @@ namespace ExportDXF
             }
 
             return false;
+        }
+
+        public static ModelDoc2 GetModelFromView(IView view)
+        {
+            var model = view.ReferencedDocument;
+            var refConfig = view.ReferencedConfiguration;
+            model.ShowConfiguration(refConfig);
+
+            return model;
         }
     }
 }
