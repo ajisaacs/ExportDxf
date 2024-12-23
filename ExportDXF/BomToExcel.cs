@@ -7,62 +7,70 @@ namespace ExportDXF
 {
     public class BomToExcel
     {
-        public string TemplatePath
-        {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates", "BomTemplate.xlsx"); }
-        }
+        private const string DefaultTemplatePath = "Templates/BomTemplate.xlsx";
+        private const string DefaultSheetName = "Parts";
+
+        public string TemplatePath { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DefaultTemplatePath);
 
         public void CreateBOMExcelFile(string filepath, IList<Item> items)
         {
-            File.Copy(TemplatePath, filepath, true);
-
-            var newFile = new FileInfo(filepath);
-
-            using (var pkg = new ExcelPackage(newFile))
+            try
             {
-                var workbook = pkg.Workbook;
-                var partsSheet = workbook.Worksheets["Parts"];
+                CopyTemplate(filepath);
 
-                for (int i = 0; i < items.Count; i++)
+                using (var pkg = new ExcelPackage(new FileInfo(filepath)))
                 {
-                    var item = items[i];
-                    var row = i + 2;
-                    var col = 1;
+                    var partsSheet = pkg.Workbook.Worksheets[DefaultSheetName] ?? throw new Exception($"Worksheet '{DefaultSheetName}' not found in template.");
 
-                    partsSheet.Cells[row, col++].Value = item.ItemNo;
-                    partsSheet.Cells[row, col++].Value = item.FileName;
-                    partsSheet.Cells[row, col++].Value = item.Quantity;
-                    partsSheet.Cells[row, col++].Value = item.Description;
-                    partsSheet.Cells[row, col++].Value = item.PartName;
-                    partsSheet.Cells[row, col++].Value = item.Configuration;
+                    PopulateSheet(partsSheet, items);
+                    AutoFitColumns(partsSheet);
 
-                    if (item.Thickness > 0)
-                        partsSheet.Cells[row, col].Value = item.Thickness;
-                    col++;
-
-                    partsSheet.Cells[row, col++].Value = item.Material;
-
-                    if (item.KFactor > 0)
-                        partsSheet.Cells[row, col].Value = item.KFactor;
-                    col++;
-
-                    if (item.BendRadius > 0)
-                        partsSheet.Cells[row, col].Value = item.BendRadius;
+                    pkg.Save();
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to create BOM Excel file: {ex.Message}");
+                throw;
+            }
+        }
 
-                for (int i = 1; i <= 8; i++)
-                {
-                    var column = partsSheet.Column(i);
+        private void CopyTemplate(string filepath)
+        {
+            if (!File.Exists(TemplatePath))
+                throw new FileNotFoundException("Template file not found.", TemplatePath);
 
-                    if (column.Style.WrapText)
-                        continue;
+            File.Copy(TemplatePath, filepath, true);
+        }
 
-                    column.AutoFit();
-                    column.Width += 1;
-                }
+        private void PopulateSheet(ExcelWorksheet sheet, IList<Item> items)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                var row = i + 2; // Assuming row 1 is the header
+                var col = 1;
 
-                workbook.Calculate();
-                pkg.Save();
+                sheet.Cells[row, col++].Value = item.ItemNo;
+                sheet.Cells[row, col++].Value = item.FileName;
+                sheet.Cells[row, col++].Value = item.Quantity;
+                sheet.Cells[row, col++].Value = item.Description;
+                sheet.Cells[row, col++].Value = item.PartName;
+                sheet.Cells[row, col++].Value = item.Configuration;
+                sheet.Cells[row, col++].Value = item.Thickness > 0 ? (object)item.Thickness : null;
+                sheet.Cells[row, col++].Value = item.Material;
+                sheet.Cells[row, col++].Value = item.KFactor > 0 ? (object)item.KFactor : null;
+                sheet.Cells[row, col++].Value = item.BendRadius > 0 ? (object)item.BendRadius : null;
+            }
+        }
+
+        private void AutoFitColumns(ExcelWorksheet sheet)
+        {
+            for (int i = 1; i <= sheet.Dimension.Columns; i++)
+            {
+                var column = sheet.Column(i);
+                column.AutoFit();
+                column.Width += 1; // Adding padding for better visibility
             }
         }
     }
