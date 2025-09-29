@@ -48,7 +48,7 @@
             this.activeDocTitleBox.ReadOnly = true;
             this.activeDocTitleBox.Size = new System.Drawing.Size(584, 25);
             this.activeDocTitleBox.TabIndex = 2;
-            this.activeDocTitleBox.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
+            this.activeDocTitleBox.TextChanged += new System.EventHandler(this.activeDocTitleBox_TextChanged);
             // 
             // richTextBox1
             // 

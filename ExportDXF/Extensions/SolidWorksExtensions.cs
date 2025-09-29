@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace ExportDXF
+namespace ExportDXF.Extensions
 {
     public static class SolidWorksExtensions
     {

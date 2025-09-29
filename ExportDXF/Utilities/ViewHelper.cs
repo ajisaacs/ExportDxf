@@ -1,11 +1,12 @@
-﻿using SolidWorks.Interop.sldworks;
+﻿using ExportDXF.Extensions;
+using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace ExportDXF
+namespace ExportDXF.Utilities
 {
     internal static class ViewHelper
     {

@@ -1,0 +1,300 @@
+﻿using ExportDXF.Extensions;
+using ExportDXF.Utilities;
+using SolidWorks.Interop.sldworks;
+using SolidWorks.Interop.swconst;
+using System;
+using System.Drawing;
+using System.IO;
+
+namespace ExportDXF.Services
+{
+    /// <summary>
+    /// Service for exporting parts to DXF format.
+    /// </summary>
+    public interface IPartExporter
+    {
+        /// <summary>
+        /// Exports a single part document to DXF.
+        /// </summary>
+        /// <param name="part">The part document to export.</param>
+        /// <param name="saveDirectory">The directory where the DXF file will be saved.</param>
+        /// <param name="context">The export context.</param>
+        void ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context);
+
+        /// <summary>
+        /// Exports an item (component from BOM or assembly) to DXF.
+        /// </summary>
+        /// <param name="item">The item to export.</param>
+        /// <param name="templateDrawing">The template drawing to use for creating flat patterns.</param>
+        /// <param name="saveDirectory">The directory where the DXF file will be saved.</param>
+        /// <param name="context">The export context.</param>
+        void ExportItem(Item item, DrawingDoc templateDrawing, string saveDirectory, ExportContext context);
+    }
+
+    public class PartExporter : IPartExporter
+    {
+        public void ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context)
+        {
+            if (part == null)
+                throw new ArgumentNullException(nameof(part));
+
+            var model = part as ModelDoc2;
+            var activeConfig = model.GetActiveConfiguration() as SolidWorks.Interop.sldworks.Configuration;
+            var originalConfigName = activeConfig?.Name;
+
+            try
+            {
+                var fileName = GetSinglePartFileName(model, context.FilePrefix);
+                var savePath = Path.Combine(saveDirectory, fileName + ".dxf");
+
+                var templateDrawing = CreateTemplateDrawing(context);
+
+                try
+                {
+                    ExportPartToDxf(part, originalConfigName, templateDrawing, savePath, context);
+                }
+                finally
+                {
+                    CloseTemplateDrawing(templateDrawing, context);
+                }
+            }
+            finally
+            {
+                if (originalConfigName != null)
+                {
+                    model.ShowConfiguration(originalConfigName);
+                }
+            }
+        }
+
+        public void ExportItem(Item item, DrawingDoc templateDrawing, string saveDirectory, ExportContext context)
+        {
+            if (item?.Component == null)
+            {
+                context.ProgressCallback?.Invoke($"Item {item?.ItemNo} - skipped, no component", Color.Yellow);
+                return;
+            }
+
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            item.Component.SetLightweightToResolved();
+
+            var model = item.Component.GetModelDoc2() as ModelDoc2;
+            var part = model as PartDoc;
+
+            if (part == null)
+            {
+                context.ProgressCallback?.Invoke($"{item.ItemNo} - skipped, not a part document", null);
+                return;
+            }
+
+            EnrichItemWithMetadata(item, model, part);
+
+            var fileName = GetItemFileName(item, context.FilePrefix);
+            var savePath = Path.Combine(saveDirectory, fileName + ".dxf");
+
+            if (ExportPartToDxf(part, item.Component.ReferencedConfiguration, templateDrawing, savePath, context))
+            {
+                item.FileName = Path.GetFileNameWithoutExtension(savePath);
+            }
+            else
+            {
+                LogExportFailure(item, context);
+            }
+        }
+
+        private void EnrichItemWithMetadata(Item item, ModelDoc2 model, PartDoc part)
+        {
+            // Get sheet metal properties
+            var sheetMetalProps = SolidWorksHelper.GetSheetMetalProperties(model);
+            if (sheetMetalProps != null)
+            {
+                item.Thickness = sheetMetalProps.Thickness;
+                item.KFactor = sheetMetalProps.KFactor;
+                item.BendRadius = sheetMetalProps.BendRadius;
+            }
+
+            // Get description from custom properties
+            var config = item.Component.ReferencedConfiguration;
+            item.Description = model.Extension.CustomPropertyManager[config].Get("Description");
+            item.Description = model.Extension.CustomPropertyManager[""].Get("Description");
+            item.Description = TextHelper.RemoveXmlTags(item.Description);
+
+            // Get material
+            item.Material = part.GetMaterialPropertyName2(config, out _);
+        }
+
+        private bool ExportPartToDxf(
+            PartDoc part,
+            string configName,
+            DrawingDoc templateDrawing,
+            string savePath,
+            ExportContext context)
+        {
+            try
+            {
+                var model = part as ModelDoc2;
+
+                if (!model.IsSheetMetal())
+                {
+                    context.ProgressCallback?.Invoke($"{model.GetTitle()} - skipped, not sheet metal", null);
+                    return false;
+                }
+
+                SolidWorksHelper.ConfigureFlatPatternSettings(model);
+
+                var sheet = templateDrawing.IGetCurrentSheet();
+                var modelName = Path.GetFileNameWithoutExtension(model.GetPathName());
+                sheet.SetName(modelName);
+
+                context.ProgressCallback?.Invoke($"{model.GetTitle()} - Creating flat pattern", null);
+
+                var view = CreateFlatPatternView(templateDrawing, model, configName);
+
+                if (view == null)
+                {
+                    context.ProgressCallback?.Invoke($"{model.GetTitle()} - Failed to create flat pattern", Color.Red);
+                    return false;
+                }
+
+                ConfigureFlatPatternView(view, templateDrawing, model, configName, context);
+
+                if (context.ViewFlipDecider?.ShouldFlip(view) == true)
+                {
+                    context.ProgressCallback?.Invoke($"{model.GetTitle()} - Flipped view", Color.Blue);
+                    view.FlipView = true;
+                }
+
+                var drawingModel = templateDrawing as ModelDoc2;
+                drawingModel.SaveAs(savePath);
+
+                AddEtchLines(savePath);
+
+                context.ProgressCallback?.Invoke($"{model.GetTitle()} - Saved to \"{savePath}\"", Color.Green);
+
+                DeleteView(drawingModel, view);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                context.ProgressCallback?.Invoke($"Export failed: {ex.Message}", Color.Red);
+                return false;
+            }
+        }
+
+        private SolidWorks.Interop.sldworks.View CreateFlatPatternView(
+            DrawingDoc drawing,
+            ModelDoc2 part,
+            string configName)
+        {
+            return drawing.CreateFlatPatternViewFromModelView3(
+                part.GetPathName(),
+                configName,
+                0, 0, 0,
+                false,
+                false);
+        }
+
+        private void ConfigureFlatPatternView(
+            SolidWorks.Interop.sldworks.View view,
+            DrawingDoc drawing,
+            ModelDoc2 partModel,
+            string configName,
+            ExportContext context)
+        {
+            view.ShowSheetMetalBendNotes = true;
+
+            var drawingModel = drawing as ModelDoc2;
+            drawingModel.ViewZoomtofit2();
+
+            var flatPatternModel = ViewHelper.GetModelFromView(view);
+            SolidWorksHelper.SetFlatPatternSuppressionState(
+                flatPatternModel,
+                swComponentSuppressionState_e.swComponentFullyResolved);
+
+            if (ViewHelper.HasSupressedBends(view))
+            {
+                context.ProgressCallback?.Invoke("A bend is suppressed, please check flat pattern", Color.Red);
+            }
+
+            if (ViewHelper.HideModelSketches(view))
+            {
+                // Recreate view without sketches
+                DeleteView(drawingModel, view);
+
+                view = CreateFlatPatternView(drawing, partModel, configName);
+                view.ShowSheetMetalBendNotes = true;
+            }
+        }
+
+        private void DeleteView(ModelDoc2 drawing, SolidWorks.Interop.sldworks.View view)
+        {
+            drawing.SelectByName(0, view.Name);
+            drawing.DeleteSelection(false);
+        }
+
+        private void AddEtchLines(string dxfPath)
+        {
+            try
+            {
+                var etcher = new EtchBendLines.Etcher();
+                etcher.AddEtchLines(dxfPath);
+            }
+            catch (Exception)
+            {
+                // Silently fail if etch lines can't be added
+            }
+        }
+
+        private string GetSinglePartFileName(ModelDoc2 model, string prefix)
+        {
+            var title = model.GetTitle().Replace(".SLDPRT", "");
+            var config = model.ConfigurationManager.ActiveConfiguration.Name;
+            var isDefaultConfig = string.Equals(config, "default", StringComparison.OrdinalIgnoreCase);
+
+            var name = isDefaultConfig ? title : $"{title} [{config}]";
+            return prefix + name;
+        }
+
+        private string GetItemFileName(Item item, string prefix)
+        {
+            prefix = prefix?.Replace("\"", "''") ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(item.ItemNo))
+            {
+                return prefix + item.PartName;
+            }
+
+            return prefix + item.ItemNo.PadLeft(2, '0');
+        }
+
+        private void LogExportFailure(Item item, ExportContext context)
+        {
+            var desc = item.Description?.ToLower() ?? string.Empty;
+
+            if (desc.Contains("laser"))
+            {
+                context.ProgressCallback?.Invoke(
+                    $"Failed to export item #{item.ItemNo} but description says it is laser cut.",
+                    Color.Red);
+            }
+            else if (desc.Contains("plasma"))
+            {
+                context.ProgressCallback?.Invoke(
+                    $"Failed to export item #{item.ItemNo} but description says it is plasma cut.",
+                    Color.Red);
+            }
+        }
+
+        private DrawingDoc CreateTemplateDrawing(ExportContext context)
+        {
+            throw new NotImplementedException("Template drawing creation not implemented.");
+        }
+
+        private void CloseTemplateDrawing(DrawingDoc drawing, ExportContext context)
+        {
+            throw new NotImplementedException("Template drawing creation not implemented.");
+        }
+    }
+}

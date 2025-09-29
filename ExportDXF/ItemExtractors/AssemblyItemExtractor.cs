@@ -1,4 +1,6 @@
-﻿using SolidWorks.Interop.sldworks;
+﻿using ExportDXF.Extensions;
+using ExportDXF.Services;
+using SolidWorks.Interop.sldworks;
 using System;
 using System.Collections.Generic;
 using System.IO;

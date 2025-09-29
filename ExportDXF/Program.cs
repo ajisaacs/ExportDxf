@@ -1,19 +1,54 @@
-﻿using System;
+﻿using ExportDXF.Forms;
+using ExportDXF.Services;
+using System;
 using System.Windows.Forms;
 
 namespace ExportDXF
 {
-    internal static class Program
+    static class Program
     {
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        private static void Main()
+        static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Forms.MainForm());
+
+            // Simple DI setup - could use a DI container like Microsoft.Extensions.DependencyInjection
+            var container = new ServiceContainer();
+
+            var mainForm = container.Resolve<MainForm>();
+
+            Application.Run(mainForm);
+        }
+    }
+
+    /// <summary>
+    /// Simple dependency injection container.
+    /// For production, consider using Microsoft.Extensions.DependencyInjection or similar.
+    /// </summary>
+    public class ServiceContainer
+    {
+        public MainForm Resolve<T>() where T : MainForm
+        {
+            // Create the dependency tree
+            var solidWorksService = new SolidWorksService();
+
+            var bomExtractor = new BomExtractor();
+            var partExporter = new PartExporter();
+            var drawingExporter = new DrawingExporter();
+            var bomExcelExporter = new BomExcelExporter();
+
+            var exportService = new DxfExportService(
+                solidWorksService,
+                bomExtractor,
+                partExporter,
+                drawingExporter,
+                bomExcelExporter);
+
+            return new MainForm(solidWorksService, exportService);
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿using SolidWorks.Interop.sldworks;
+﻿using ExportDXF.Extensions;
+using ExportDXF.Services;
+using ExportDXF.Utilities;
+using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
@@ -52,7 +55,7 @@ namespace ExportDXF.ItemExtractors
             if (columnIndices.ItemNumber != -1)
             {
                 var x = table.DisplayedText[rowIndex, columnIndices.ItemNumber];
-                x = Helper.RemoveXmlTags(x);
+                x = TextHelper.RemoveXmlTags(x);
 
                 double d;
 
@@ -69,7 +72,7 @@ namespace ExportDXF.ItemExtractors
             if (columnIndices.PartNumber != -1)
             {
                 var x = table.DisplayedText[rowIndex, columnIndices.PartNumber];
-                x = Helper.RemoveXmlTags(x);
+                x = TextHelper.RemoveXmlTags(x);
 
                 item.PartName = x;
 
@@ -78,7 +81,7 @@ namespace ExportDXF.ItemExtractors
             if (columnIndices.Description != -1)
             {
                 var x = table.DisplayedText[rowIndex, columnIndices.Description];
-                x = Helper.RemoveXmlTags(x);
+                x = TextHelper.RemoveXmlTags(x);
 
                 item.Description = x;
             }
@@ -86,7 +89,7 @@ namespace ExportDXF.ItemExtractors
             if (columnIndices.Quantity != -1)
             {
                 var qtyString = table.DisplayedText[rowIndex, columnIndices.Quantity];
-                qtyString = Helper.RemoveXmlTags(qtyString);
+                qtyString = TextHelper.RemoveXmlTags(qtyString);
 
                 int qty = 0;
                 int.TryParse(qtyString, out qty);
