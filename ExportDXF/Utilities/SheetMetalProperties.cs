@@ -6,7 +6,7 @@
     public class SheetMetalProperties
     {
         /// <summary>
-        /// Material thickness in millimeters.
+        /// Material thickness
         /// </summary>
         public double Thickness { get; set; }
 
@@ -16,12 +16,12 @@
         public double KFactor { get; set; }
 
         /// <summary>
-        /// Bend radius in millimeters.
+        /// Inside bend radius
         /// </summary>
         public double BendRadius { get; set; }
 
         /// <summary>
-        /// Bend allowance in millimeters.
+        /// Bend allowance
         /// </summary>
         public double BendAllowance { get; set; }
 
@@ -37,7 +37,7 @@
 
         public override string ToString()
         {
-            return $"Thickness: {Thickness:F2}mm, K-Factor: {KFactor:F3}, Bend Radius: {BendRadius:F2}mm";
+            return $"Thickness: {Thickness:F2}\", K-Factor: {KFactor:F3}, Bend Radius: {BendRadius:F2}\"";
         }
     }
 }
