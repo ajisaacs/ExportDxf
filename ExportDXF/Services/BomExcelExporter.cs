@@ -285,10 +285,22 @@ namespace ExportDXF.Services
             {
                 worksheet.Column(col).AutoFit();
 
-                if (worksheet.Column(col).Width > MAX_COLUMN_WIDTH)
+                // Special handling for Description column (assuming it's column 4)
+                if (col == 4) // Description column
+                {
+                    worksheet.Column(col).Width = Math.Max(worksheet.Column(col).Width, 30); // Minimum 30 units
+
+                    if (worksheet.Column(col).Width > 50) // Maximum 50 units
+                        worksheet.Column(col).Width = 50;
+                }
+                else if (worksheet.Column(col).Width > MAX_COLUMN_WIDTH)
+                {
                     worksheet.Column(col).Width = MAX_COLUMN_WIDTH;
+                }
                 else
+                {
                     worksheet.Column(col).Width += COLUMN_PADDING;
+                }
             }
 
             // Add borders if enabled
