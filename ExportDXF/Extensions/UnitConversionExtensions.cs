@@ -5,8 +5,8 @@
     /// </summary>
     public static class UnitConversionExtensions
     {
-        private const double METERS_TO_MM = .0001;
-        private const double METERS_TO_INCHES = 0.0254;
+        private const double METERS_TO_MM = 1000;
+        private const double METERS_TO_INCHES = 39.37007874;
 
         /// <summary>
         /// Converts a SolidWorks dimension (in meters) to millimeters.
