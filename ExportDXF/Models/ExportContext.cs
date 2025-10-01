@@ -1,7 +1,11 @@
 ﻿using ExportDXF.ViewFlipDeciders;
+using SolidWorks.Interop.sldworks;
+using SolidWorks.Interop.swconst;
 using System;
 using System.Drawing;
+using System.IO;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace ExportDXF.Services
 {
@@ -10,6 +14,9 @@ namespace ExportDXF.Services
     /// </summary>
     public class ExportContext
     {
+        private const string DRAWING_TEMPLATE_FOLDER = "Templates";
+        private const string DRAWING_TEMPLATE_FILE = "Blank.drwdot";
+
         /// <summary>
         /// The document to be exported.
         /// </summary>
@@ -34,5 +41,90 @@ namespace ExportDXF.Services
         /// Callback for reporting progress and status messages.
         /// </summary>
         public Action<string, Color?> ProgressCallback { get; set; }
+
+        public void LogProgress(string message, Color? color = null)
+        {
+            ProgressCallback?.Invoke(message, color);
+        }
+
+        public SldWorks SolidWorksApp { get; set; }
+
+        public DrawingDoc TemplateDrawing { get; set; }
+
+        private string DrawingTemplatePath
+        {
+            get
+            {
+                return Path.Combine(
+                    Application.StartupPath, 
+                    DRAWING_TEMPLATE_FOLDER, 
+                    DRAWING_TEMPLATE_FILE);
+            }
+        }
+
+        public DrawingDoc GetOrCreateTemplateDrawing()
+        {
+            if (TemplateDrawing != null)
+                return TemplateDrawing;
+
+            TemplateDrawing = SolidWorksApp.NewDocument(
+                DrawingTemplatePath,
+                (int)swDwgPaperSizes_e.swDwgPaperDsize,
+                1,
+                1) as DrawingDoc;
+
+            return TemplateDrawing;
+        }
+
+        public void CleanupTemplateDrawing()
+        {
+            try
+            {
+                if (TemplateDrawing == null)
+                    return;
+
+                if (SolidWorksApp == null)
+                {
+                    ProgressCallback?.Invoke("Warning: Cannot cleanup template drawing - SolidWorks app not available", Color.DarkBlue);
+                    TemplateDrawing = null;
+                    return;
+                }
+
+                var model = TemplateDrawing as ModelDoc2;
+                if (model != null)
+                {
+                    var title = model.GetTitle();
+
+                    if (!string.IsNullOrEmpty(title))
+                    {
+                        // Close the document without saving
+                        SolidWorksApp.CloseDoc(title);
+                        ProgressCallback?.Invoke("Closed template drawing", null);
+                    }
+                }
+
+                // Clear the reference regardless of success/failure
+                TemplateDrawing = null;
+            }
+            catch (Exception ex)
+            {
+                ProgressCallback?.Invoke($"Failed to close template drawing: {ex.Message}", Color.Red);
+
+                // Still clear the reference to prevent further issues
+                TemplateDrawing = null;
+
+                // Don't throw here as this is cleanup code - log the error but continue
+            }
+        }
+
+        public void CloseDocument(string title)
+        {
+            SolidWorksApp?.CloseDoc(title);
+        }
+
+        public ModelDoc2 CreateDocument(string templatePath, int paperSize, double width, double height)
+        {
+            return SolidWorksApp?.NewDocument(templatePath, paperSize, width, height) as ModelDoc2;
+        }
     }
 }

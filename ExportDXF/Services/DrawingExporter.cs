@@ -16,14 +16,13 @@ namespace ExportDXF.Services
         /// </summary>
         /// <param name="drawing">The drawing document to export.</param>
         /// <param name="saveDirectory">The directory where the PDF file will be saved.</param>
-        /// <param name="progressCallback">Optional callback for progress updates.</param>
-        void ExportToPdf(DrawingDoc drawing, string saveDirectory, Action<string, Color?> progressCallback);
+        /// <param name="context">The export context containing SolidWorks app and callbacks.</param>
+        void ExportToPdf(DrawingDoc drawing, string saveDirectory, ExportContext context);
     }
-
 
     public class DrawingExporter : IDrawingExporter
     {
-        public void ExportToPdf(DrawingDoc drawing, string saveDirectory, Action<string, Color?> progressCallback)
+        public void ExportToPdf(DrawingDoc drawing, string saveDirectory, ExportContext context)
         {
             if (drawing == null)
                 throw new ArgumentNullException(nameof(drawing));
@@ -31,27 +30,40 @@ namespace ExportDXF.Services
             if (string.IsNullOrWhiteSpace(saveDirectory))
                 throw new ArgumentException("Save directory cannot be null or empty.", nameof(saveDirectory));
 
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
+            if (context.SolidWorksApp == null)
+                throw new ArgumentException("SolidWorksApp cannot be null in context.", nameof(context));
+
             try
             {
                 var pdfFileName = GetPdfFileName(drawing);
                 var pdfPath = Path.Combine(saveDirectory, pdfFileName);
 
                 var model = drawing as ModelDoc2;
-                var sldWorks = (SldWorks)Activator.CreateInstance(Type.GetTypeFromProgID("SldWorks.Application"));
+                var sldWorks = context.SolidWorksApp;
 
                 var exportData = sldWorks.GetExportFileData(
                     (int)swExportDataFileType_e.swExportPdfData) as ExportPdfData;
+
+                if (exportData == null)
+                {
+                    throw new InvalidOperationException("Failed to get PDF export data from SolidWorks.");
+                }
 
                 exportData.ViewPdfAfterSaving = false;
                 exportData.SetSheets(
                     (int)swExportDataSheetsToExport_e.swExportData_ExportAllSheets,
                     drawing);
 
+                context.ProgressCallback?.Invoke($"Exporting drawing to PDF: \"{pdfFileName}\"", null);
+
                 int errors = 0;
                 int warnings = 0;
 
                 var modelExtension = model.Extension;
-                modelExtension.SaveAs(
+                var success = modelExtension.SaveAs(
                     pdfPath,
                     (int)swSaveAsVersion_e.swSaveAsCurrentVersion,
                     (int)swSaveAsOptions_e.swSaveAsOptions_Silent,
@@ -59,19 +71,29 @@ namespace ExportDXF.Services
                     ref errors,
                     ref warnings);
 
-                if (errors == 0)
+                if (success && errors == 0)
                 {
-                    progressCallback?.Invoke($"Saved drawing to PDF: \"{pdfFileName}\"", Color.Green);
+                    context.ProgressCallback?.Invoke($"Saved drawing to PDF: \"{pdfFileName}\"", Color.Green);
+                }
+                else if (success && warnings > 0)
+                {
+                    context.ProgressCallback?.Invoke(
+                        $"PDF export completed with warnings: {warnings}",
+                        Color.DarkBlue);
                 }
                 else
                 {
-                    progressCallback?.Invoke($"PDF export completed with errors: {errors}", Color.Yellow);
+                    context.ProgressCallback?.Invoke(
+                        $"PDF export failed. Errors: {errors}, Warnings: {warnings}",
+                        Color.Red);
+                    throw new InvalidOperationException($"PDF export failed with {errors} errors and {warnings} warnings.");
                 }
             }
             catch (Exception ex)
             {
-                progressCallback?.Invoke($"Failed to export PDF: {ex.Message}", Color.Red);
-                throw;
+                var errorMessage = $"Failed to export PDF: {ex.Message}";
+                context.ProgressCallback?.Invoke(errorMessage, Color.Red);
+                throw new InvalidOperationException(errorMessage, ex);
             }
         }
 
@@ -79,6 +101,14 @@ namespace ExportDXF.Services
         {
             var model = drawing as ModelDoc2;
             var modelFilePath = model.GetPathName();
+
+            if (string.IsNullOrEmpty(modelFilePath))
+            {
+                // Handle unsaved documents
+                var title = model.GetTitle();
+                return string.IsNullOrEmpty(title) ? "Untitled.pdf" : Path.GetFileNameWithoutExtension(title) + ".pdf";
+            }
+
             return Path.GetFileNameWithoutExtension(modelFilePath) + ".pdf";
         }
     }

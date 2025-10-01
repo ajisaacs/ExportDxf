@@ -25,10 +25,9 @@ namespace ExportDXF.Services
         /// Exports an item (component from BOM or assembly) to DXF.
         /// </summary>
         /// <param name="item">The item to export.</param>
-        /// <param name="templateDrawing">The template drawing to use for creating flat patterns.</param>
         /// <param name="saveDirectory">The directory where the DXF file will be saved.</param>
         /// <param name="context">The export context.</param>
-        void ExportItem(Item item, DrawingDoc templateDrawing, string saveDirectory, ExportContext context);
+        void ExportItem(Item item, string saveDirectory, ExportContext context);
     }
 
     public class PartExporter : IPartExporter
@@ -37,6 +36,12 @@ namespace ExportDXF.Services
         {
             if (part == null)
                 throw new ArgumentNullException(nameof(part));
+
+            if (string.IsNullOrWhiteSpace(saveDirectory))
+                throw new ArgumentException("Save directory cannot be null or empty.", nameof(saveDirectory));
+
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
             var model = part as ModelDoc2;
             var activeConfig = model.GetActiveConfiguration() as SolidWorks.Interop.sldworks.Configuration;
@@ -47,16 +52,9 @@ namespace ExportDXF.Services
                 var fileName = GetSinglePartFileName(model, context.FilePrefix);
                 var savePath = Path.Combine(saveDirectory, fileName + ".dxf");
 
-                var templateDrawing = CreateTemplateDrawing(context);
+                context.GetOrCreateTemplateDrawing();
 
-                try
-                {
-                    ExportPartToDxf(part, originalConfigName, templateDrawing, savePath, context);
-                }
-                finally
-                {
-                    CloseTemplateDrawing(templateDrawing, context);
-                }
+                ExportPartToDxf(part, originalConfigName, savePath, context);
             }
             finally
             {
@@ -67,8 +65,14 @@ namespace ExportDXF.Services
             }
         }
 
-        public void ExportItem(Item item, DrawingDoc templateDrawing, string saveDirectory, ExportContext context)
+        public void ExportItem(Item item, string saveDirectory, ExportContext context)
         {
+            if (string.IsNullOrWhiteSpace(saveDirectory))
+                throw new ArgumentException("Save directory cannot be null or empty.", nameof(saveDirectory));
+
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
             if (item?.Component == null)
             {
                 context.ProgressCallback?.Invoke($"Item {item?.ItemNo} - skipped, no component", Color.Yellow);
@@ -93,7 +97,9 @@ namespace ExportDXF.Services
             var fileName = GetItemFileName(item, context.FilePrefix);
             var savePath = Path.Combine(saveDirectory, fileName + ".dxf");
 
-            if (ExportPartToDxf(part, item.Component.ReferencedConfiguration, templateDrawing, savePath, context))
+            var templateDrawing = context.GetOrCreateTemplateDrawing();
+
+            if (ExportPartToDxf(part, item.Component.ReferencedConfiguration, savePath, context))
             {
                 item.FileName = Path.GetFileNameWithoutExtension(savePath);
             }
@@ -116,8 +122,18 @@ namespace ExportDXF.Services
 
             // Get description from custom properties
             var config = item.Component.ReferencedConfiguration;
-            item.Description = model.Extension.CustomPropertyManager[config].Get("Description");
-            item.Description = model.Extension.CustomPropertyManager[""].Get("Description");
+
+            // Try configuration-specific properties first
+            var configPropertyManager = model.Extension.CustomPropertyManager[config];
+            item.Description = configPropertyManager?.Get("Description");
+
+            // Fall back to document-level properties if no config-specific description
+            if (string.IsNullOrEmpty(item.Description))
+            {
+                var docPropertyManager = model.Extension.CustomPropertyManager[""];
+                item.Description = docPropertyManager?.Get("Description");
+            }
+
             item.Description = TextHelper.RemoveXmlTags(item.Description);
 
             // Get material
@@ -127,7 +143,6 @@ namespace ExportDXF.Services
         private bool ExportPartToDxf(
             PartDoc part,
             string configName,
-            DrawingDoc templateDrawing,
             string savePath,
             ExportContext context)
         {
@@ -140,6 +155,8 @@ namespace ExportDXF.Services
                     context.ProgressCallback?.Invoke($"{model.GetTitle()} - skipped, not sheet metal", null);
                     return false;
                 }
+
+                var templateDrawing = context.GetOrCreateTemplateDrawing();
 
                 SolidWorksHelper.ConfigureFlatPatternSettings(model);
 
@@ -285,16 +302,6 @@ namespace ExportDXF.Services
                     $"Failed to export item #{item.ItemNo} but description says it is plasma cut.",
                     Color.Red);
             }
-        }
-
-        private DrawingDoc CreateTemplateDrawing(ExportContext context)
-        {
-            throw new NotImplementedException("Template drawing creation not implemented.");
-        }
-
-        private void CloseTemplateDrawing(DrawingDoc drawing, ExportContext context)
-        {
-            throw new NotImplementedException("Template drawing creation not implemented.");
         }
     }
 }

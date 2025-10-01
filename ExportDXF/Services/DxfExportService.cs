@@ -25,9 +25,6 @@ namespace ExportDXF.Services
     /// </summary>
     public class DxfExportService : IDxfExportService
     {
-        private const string DRAWING_TEMPLATE_FOLDER = "Templates";
-        private const string DRAWING_TEMPLATE_FILE = "Blank.drwdot";
-
         private readonly ISolidWorksService _solidWorksService;
         private readonly IBomExtractor _bomExtractor;
         private readonly IPartExporter _partExporter;
@@ -57,6 +54,7 @@ namespace ExportDXF.Services
                 throw new ArgumentNullException(nameof(context));
 
             ValidateContext(context);
+            SetupExportContext(context);
 
             var startTime = DateTime.Now;
 
@@ -85,6 +83,7 @@ namespace ExportDXF.Services
             }
             finally
             {
+                CleanupExportContext(context);
                 _solidWorksService.EnableUserControl(true);
 
                 var duration = DateTime.Now - startTime;
@@ -131,7 +130,7 @@ namespace ExportDXF.Services
 
             if (items == null || items.Count == 0)
             {
-                LogProgress(context, "No items found in assembly.", Color.Yellow);
+                LogProgress(context, "No items found in assembly.", Color.DarkBlue);
                 return;
             }
 
@@ -177,10 +176,44 @@ namespace ExportDXF.Services
             }
 
             // Export drawing to PDF first
-            _drawingExporter.ExportToPdf(drawing, saveDirectory, context.ProgressCallback);
+            _drawingExporter.ExportToPdf(drawing, saveDirectory, context);
 
             // Then export parts to DXF
             ExportItems(items, saveDirectory, context);
+        }
+
+        #endregion
+
+        #region Context Management
+
+        private void SetupExportContext(ExportContext context)
+        {
+            // Set up SolidWorks application reference
+            context.SolidWorksApp = _solidWorksService.GetNativeSldWorks();
+
+            if (context.SolidWorksApp == null)
+            {
+                throw new InvalidOperationException("SolidWorks service is not connected.");
+            }
+
+            // Set up drawing template path
+            context.TemplateDrawing = null;
+
+            LogProgress(context, "Export context initialized", null);
+        }
+
+        private void CleanupExportContext(ExportContext context)
+        {
+            try
+            {
+                // Clean up template drawing if it was created
+                context.CleanupTemplateDrawing();
+            }
+            catch (Exception ex)
+            {
+                LogProgress(context, $"Warning: Failed to cleanup template drawing: {ex.Message}", Color.DarkBlue);
+                // Don't throw - this is cleanup code
+            }
         }
 
         #endregion
@@ -207,117 +240,43 @@ namespace ExportDXF.Services
 
         private void ExportItems(List<Item> items, string saveDirectory, ExportContext context)
         {
-            DrawingDoc templateDrawing = null;
+            LogProgress(context, "", null);
 
-            try
+            int successCount = 0;
+            int failureCount = 0;
+
+            foreach (var item in items)
             {
-                templateDrawing = CreateTemplateDrawing();
+                if (context.CancellationToken.IsCancellationRequested)
+                {
+                    LogProgress(context, "Export canceled by user.", Color.DarkBlue);
+                    return;
+                }
+
+                try
+                {
+                    // PartExporter will handle template drawing creation through context
+                    _partExporter.ExportItem(item, saveDirectory, context);
+
+                    if (!string.IsNullOrEmpty(item.FileName))
+                        successCount++;
+                    else
+                        failureCount++;
+                }
+                catch (Exception ex)
+                {
+                    LogProgress(context, $"Error exporting item {item.ItemNo}: {ex.Message}", Color.Red);
+                    failureCount++;
+                }
 
                 LogProgress(context, "", null);
-
-                int successCount = 0;
-                int failureCount = 0;
-
-                foreach (var item in items)
-                {
-                    if (context.CancellationToken.IsCancellationRequested)
-                    {
-                        LogProgress(context, "Export canceled by user.", Color.Yellow);
-                        return;
-                    }
-
-                    try
-                    {
-                        _partExporter.ExportItem(item, templateDrawing, saveDirectory, context);
-
-                        if (!string.IsNullOrEmpty(item.FileName))
-                            successCount++;
-                        else
-                            failureCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        LogProgress(context, $"Error exporting item {item.ItemNo}: {ex.Message}", Color.Red);
-                        failureCount++;
-                    }
-
-                    LogProgress(context, "", null);
-                }
-
-                LogProgress(context, $"Export complete: {successCount} succeeded, {failureCount} failed",
-                    failureCount > 0 ? Color.Yellow : Color.Green);
-
-                // Create BOM Excel file
-                CreateBomExcelFile(items, saveDirectory, context);
-            }
-            finally
-            {
-                CloseTemplateDrawing(templateDrawing);
-            }
-        }
-
-        #endregion
-
-        #region Template Drawing Management
-
-        private DrawingDoc CreateTemplateDrawing()
-        {
-            var sldWorks = _solidWorksService.GetNativeSldWorks();
-
-            if (sldWorks == null)
-                throw new InvalidOperationException("SolidWorks service is not connected.");
-
-            var templatePath = GetDrawingTemplatePath();
-
-            if (!File.Exists(templatePath))
-            {
-                throw new FileNotFoundException(
-                    $"Drawing template not found at: {templatePath}",
-                    templatePath);
             }
 
-            var drawing = sldWorks.NewDocument(
-                templatePath,
-                (int)swDwgPaperSizes_e.swDwgPaperDsize,
-                1,
-                1) as DrawingDoc;
+            LogProgress(context, $"Export complete: {successCount} succeeded, {failureCount} failed",
+                failureCount > 0 ? Color.DarkBlue : Color.Green);
 
-            if (drawing == null)
-            {
-                throw new InvalidOperationException(
-                    "Failed to create drawing from template. Please check the template file.");
-            }
-
-            return drawing;
-        }
-
-        private void CloseTemplateDrawing(DrawingDoc drawing)
-        {
-            if (drawing == null)
-                return;
-
-            try
-            {
-                var model = drawing as ModelDoc2;
-                var title = model?.GetTitle();
-
-                if (!string.IsNullOrEmpty(title))
-                {
-                    _solidWorksService.CloseDocument(title);
-                }
-            }
-            catch
-            {
-                // Ignore errors during cleanup
-            }
-        }
-
-        private string GetDrawingTemplatePath()
-        {
-            return Path.Combine(
-                Application.StartupPath,
-                DRAWING_TEMPLATE_FOLDER,
-                DRAWING_TEMPLATE_FILE);
+            // Create BOM Excel file
+            CreateBomExcelFile(items, saveDirectory, context);
         }
 
         #endregion
@@ -407,6 +366,8 @@ namespace ExportDXF.Services
         {
             context.ProgressCallback?.Invoke(message, color);
         }
+
+        
 
         #endregion
     }
