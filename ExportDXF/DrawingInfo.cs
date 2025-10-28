@@ -4,9 +4,9 @@ namespace ExportDXF
 {
     public class DrawingInfo
     {
-        private static Regex drawingFormatRegex = new Regex(@"(?<jobNo>[345]\d{3}(-\d+\w{1,2})?)\s?(?<dwgNo>[ABEP]\d+(-?(\d+[A-Z]?))?)", RegexOptions.IgnoreCase);
+        private static Regex drawingFormatRegex = new Regex(@"(?<equipmentNo>[345]\d{3}(-\d+\w{1,2})?)\s?(?<dwgNo>[ABEP]\d+(-?(\d+[A-Z]?))?)", RegexOptions.IgnoreCase);
 
-        public string JobNo { get; set; }
+        public string EquipmentNo { get; set; }
 
         public string DrawingNo { get; set; }
 
@@ -14,7 +14,7 @@ namespace ExportDXF
 
         public override string ToString()
         {
-            return $"{JobNo} {DrawingNo}";
+            return $"{EquipmentNo} {DrawingNo}";
         }
 
         public override bool Equals(object obj)
@@ -39,7 +39,7 @@ namespace ExportDXF
 
             var dwg = new DrawingInfo();
 
-            dwg.JobNo = match.Groups["jobNo"].Value;
+            dwg.EquipmentNo = match.Groups["equipmentNo"].Value;
             dwg.DrawingNo = match.Groups["dwgNo"].Value;
             dwg.Source = input;
 
