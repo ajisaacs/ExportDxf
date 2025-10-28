@@ -283,7 +283,11 @@ namespace ExportDXF.Services
                 return prefix + item.PartName;
             }
 
-            return prefix + item.ItemNo.PadLeft(2, '0');
+            var num = item.ItemNo.PadLeft(2, '0');
+            // Expected format: {DrawingNo} PT{ItemNo}
+            return string.IsNullOrWhiteSpace(prefix)
+                ? $"PT{num}"
+                : $"{prefix} PT{num}";
         }
 
         private void LogExportFailure(Item item, ExportContext context)
