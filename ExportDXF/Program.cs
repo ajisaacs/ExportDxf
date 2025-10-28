@@ -1,6 +1,7 @@
 ﻿using ExportDXF.Forms;
 using ExportDXF.Services;
 using System;
+using System.Configuration;
 using System.Windows.Forms;
 
 namespace ExportDXF
@@ -39,16 +40,17 @@ namespace ExportDXF
             var bomExtractor = new BomExtractor();
             var partExporter = new PartExporter();
             var drawingExporter = new DrawingExporter();
-            var bomExcelExporter = new BomExcelExporter();
+            var baseUrl = ConfigurationManager.AppSettings["CutFab.ApiBaseUrl"] ?? "http://localhost:7027";
+            var apiClient = new CutFabApiClient(baseUrl);
 
             var exportService = new DxfExportService(
                 solidWorksService,
                 bomExtractor,
                 partExporter,
                 drawingExporter,
-                bomExcelExporter);
+                apiClient);
 
-            return new MainForm(solidWorksService, exportService);
+            return new MainForm(solidWorksService, exportService, apiClient);
         }
     }
 }
