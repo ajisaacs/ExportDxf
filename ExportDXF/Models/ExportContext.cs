@@ -33,6 +33,11 @@ namespace ExportDXF.Services
         public string FilePrefix { get; set; }
 
         /// <summary>
+        /// Selected Equipment ID for API operations (optional).
+        /// </summary>
+        public int? EquipmentId { get; set; }
+
+        /// <summary>
         /// Cancellation token for canceling the export operation.
         /// </summary>
         public CancellationToken CancellationToken { get; set; }

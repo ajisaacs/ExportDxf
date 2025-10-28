@@ -1,13 +1,17 @@
-﻿using ExportDXF.Extensions;
+using ExportDXF.Extensions;
 using ExportDXF.ItemExtractors;
 using ExportDXF.Models;
+using ExportDXF;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using Environment = System.Environment;
+using System.IO.Compression;
 
 namespace ExportDXF.Services
 {
@@ -29,20 +33,20 @@ namespace ExportDXF.Services
         private readonly IBomExtractor _bomExtractor;
         private readonly IPartExporter _partExporter;
         private readonly IDrawingExporter _drawingExporter;
-        private readonly IBomExcelExporter _bomExcelExporter;
+        private readonly ICutFabApiClient _apiClient;
 
         public DxfExportService(
             ISolidWorksService solidWorksService,
             IBomExtractor bomExtractor,
             IPartExporter partExporter,
             IDrawingExporter drawingExporter,
-            IBomExcelExporter bomExcelExporter)
+            ICutFabApiClient apiClient)
         {
             _solidWorksService = solidWorksService ?? throw new ArgumentNullException(nameof(solidWorksService));
             _bomExtractor = bomExtractor ?? throw new ArgumentNullException(nameof(bomExtractor));
             _partExporter = partExporter ?? throw new ArgumentNullException(nameof(partExporter));
             _drawingExporter = drawingExporter ?? throw new ArgumentNullException(nameof(drawingExporter));
-            _bomExcelExporter = bomExcelExporter ?? throw new ArgumentNullException(nameof(bomExcelExporter));
+            _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         }
 
         /// <summary>
@@ -104,14 +108,8 @@ namespace ExportDXF.Services
                 return;
             }
 
-            var saveDirectory = PromptUserForDirectory(context);
-            if (saveDirectory == null)
-            {
-                LogProgress(context, "Canceled", Color.Red);
-                return;
-            }
-
-            _partExporter.ExportSinglePart(part, saveDirectory, context);
+            var tempDir = CreateTempWorkDir();
+            _partExporter.ExportSinglePart(part, tempDir, context);
         }
 
         private void ExportAssembly(ExportContext context)
@@ -136,14 +134,8 @@ namespace ExportDXF.Services
 
             LogProgress(context, $"Found {items.Count} item(s).", null);
 
-            var saveDirectory = PromptUserForDirectory(context);
-            if (saveDirectory == null)
-            {
-                LogProgress(context, "Canceled", Color.Red);
-                return;
-            }
-
-            ExportItems(items, saveDirectory, context);
+            var tempDir = CreateTempWorkDir();
+            ExportItems(items, tempDir, context, drawingId: null);
         }
 
         private void ExportDrawing(ExportContext context)
@@ -168,18 +160,120 @@ namespace ExportDXF.Services
 
             LogProgress(context, $"Found {items.Count} component(s)", null);
 
-            var saveDirectory = PromptUserForDirectory(context);
-            if (saveDirectory == null)
+            var tempDir = CreateTempWorkDir();
+
+            // Determine drawing number
+            var drawingNumber = ParseDrawingNumber(context);
+            if (string.IsNullOrWhiteSpace(drawingNumber))
             {
-                LogProgress(context, "Canceled", Color.Red);
-                return;
+                LogProgress(context, "Warning: Could not determine drawing number for API upload.", Color.DarkBlue);
             }
 
-            // Export drawing to PDF first
-            _drawingExporter.ExportToPdf(drawing, saveDirectory, context);
+            // Resolve drawing ID if possible
+            int? drawingId = null;
+            if (!string.IsNullOrWhiteSpace(drawingNumber))
+            {
+                drawingId = _apiClient.ResolveDrawingIdAsync(drawingNumber).GetAwaiter().GetResult();
+                // Fallback: if resolve endpoint not available or failed, search equipment details
+                if (drawingId == null && context.EquipmentId.HasValue)
+                {
+                    try
+                    {
+                        var drawings = _apiClient.GetDrawingsForEquipmentAsync(context.EquipmentId.Value).GetAwaiter().GetResult();
+                        if (drawings != null)
+                        {
+                            // Match by exact DrawingNumber (case-insensitive, trimmed)
+                            var match = drawings.FirstOrDefault(d => string.Equals(d.DrawingNumber?.Trim(), drawingNumber.Trim(), StringComparison.OrdinalIgnoreCase));
+                            if (match != null) drawingId = match.ID;
+                        }
+                    }
+                    catch { }
+                }
+                if (drawingId == null)
+                {
+                    // If equipment is provided, create the drawing on the API
+                    if (context.EquipmentId.HasValue)
+                    {
+                        var create = _apiClient.CreateDrawingWithInfoAsync(context.EquipmentId.Value, drawingNumber).GetAwaiter().GetResult();
+                        if (create != null && create.Success && create.Data.HasValue)
+                        {
+                            drawingId = create.Data;
+                            LogProgress(context, "Created drawing '" + drawingNumber + "' (ID " + drawingId + ") for equipment " + context.EquipmentId, Color.Green);
+                        }
+                        else
+                        {
+                            var code = create != null ? create.StatusCode.ToString() : "?";
+                            var err = create != null ? (create.Error ?? create.RawBody) : null;
+                            if (!string.IsNullOrWhiteSpace(err) && err.Length > 180) err = err.Substring(0, 180) + "...";
+                            LogProgress(context, "Warning: Could not create drawing '" + drawingNumber + "' on API (status " + code + "). " + (err ?? string.Empty), Color.DarkBlue);
+                        }
+                    }
+                    else
+                    {
+                        LogProgress(context, $"Warning: Drawing '{drawingNumber}' not found in API; uploads will be skipped.", Color.DarkBlue);
+                    }
+                }
 
-            // Then export parts to DXF
-            ExportItems(items, saveDirectory, context);
+                // Export drawing to PDF first
+                _drawingExporter.ExportToPdf(drawing, tempDir, context);
+
+                // Upload PDF if we have a drawing number
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(drawingNumber))
+                    {
+                        var pdfs = Directory.GetFiles(tempDir, "*.pdf");
+                        var pdfName = pdfs.Length > 0 ? pdfs[0] : null;
+                        if (pdfName != null)
+                        {
+                            var uploadedBy = Environment.UserName;
+                            var ok = _apiClient.UploadDrawingPdfAsync(drawingNumber, pdfName, uploadedBy, null).GetAwaiter().GetResult();
+                            LogProgress(context, ok ? $"Uploaded PDF for '{drawingNumber}'" : $"Failed to upload PDF for '{drawingNumber}'", ok ? Color.Green : Color.Red);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogProgress(context, $"PDF upload error: {ex.Message}", Color.Red);
+                }
+
+                // If we still don't have an ID, resolve again after PDF upload (server may create on upload)
+                if (!drawingId.HasValue && !string.IsNullOrWhiteSpace(drawingNumber))
+                {
+                    var resolved = _apiClient.ResolveDrawingIdAsync(drawingNumber).GetAwaiter().GetResult();
+                    if (!resolved.HasValue && context.EquipmentId.HasValue)
+                    {
+                        try
+                        {
+                            var drawings = _apiClient.GetDrawingsForEquipmentAsync(context.EquipmentId.Value).GetAwaiter().GetResult();
+                            if (drawings != null)
+                            {
+                                var match = drawings.FirstOrDefault(d => string.Equals(d.DrawingNumber?.Trim(), drawingNumber.Trim(), StringComparison.OrdinalIgnoreCase));
+                                if (match != null) resolved = match.ID;
+                            }
+                        }
+                        catch { }
+                    }
+                    if (resolved.HasValue)
+                    {
+                        drawingId = resolved;
+                        LogProgress(context, $"Resolved drawing ID after PDF upload: {drawingId}", Color.Green);
+                    }
+                }
+
+                // Then export parts to DXF and upload per-file
+                ExportItems(items, tempDir, context, drawingId);
+
+                // Attempt to auto-link templates at the end
+                try
+                {
+                    if (drawingId.HasValue)
+                    {
+                        _apiClient.AutoLinkTemplatesAsync(drawingId.Value).GetAwaiter().GetResult();
+                    }
+                }
+                catch { }
+            }
         }
 
         #endregion
@@ -238,7 +332,7 @@ namespace ExportDXF.Services
             }
         }
 
-        private void ExportItems(List<Item> items, string saveDirectory, ExportContext context)
+        private void ExportItems(List<Item> items, string saveDirectory, ExportContext context, int? drawingId)
         {
             LogProgress(context, "", null);
 
@@ -259,9 +353,51 @@ namespace ExportDXF.Services
                     _partExporter.ExportItem(item, saveDirectory, context);
 
                     if (!string.IsNullOrEmpty(item.FileName))
+                    {
                         successCount++;
+
+                        // If we know the drawing, upload DXF and BOM row immediately
+                        if (drawingId.HasValue)
+                        {
+                            var dxfPath = Path.Combine(saveDirectory, item.FileName + ".dxf");
+                            if (File.Exists(dxfPath))
+                            {
+                                // Zip just this file
+                                string zipPath = CreateZipWithSingleFile(dxfPath);
+                                try
+                                {
+                                    var okZip = _apiClient.UploadDxfZipAsync(drawingId.Value, zipPath).GetAwaiter().GetResult();
+                                    LogProgress(context, okZip ? $"Uploaded DXF: {Path.GetFileName(dxfPath)}" : $"Failed to upload DXF: {Path.GetFileName(dxfPath)}", okZip ? Color.Green : Color.Red);
+                                }
+                                finally
+                                {
+                                    try { if (File.Exists(zipPath)) File.Delete(zipPath); } catch { }
+                                }
+
+                                // Create BOM item
+                                var dto = new
+                                {
+                                    DrawingID = drawingId.Value,
+                                    ItemNo = item.ItemNo,
+                                    PartNo = item.FileName,
+                                    Qty = (int?)item.Quantity,
+                                    Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description,
+                                    PartName = string.IsNullOrWhiteSpace(item.PartName) ? null : item.PartName,
+                                    ConfigurationName = string.IsNullOrWhiteSpace(item.Configuration) ? null : item.Configuration,
+                                    Material = string.IsNullOrWhiteSpace(item.Material) ? null : item.Material,
+                                    SortOrder = 0,
+                                    CutTemplateID = (int?)null,
+                                    FormProgramID = (int?)null
+                                };
+                                var bomId = _apiClient.CreateBomItemAsync(dto).GetAwaiter().GetResult();
+                                LogProgress(context, bomId.HasValue ? $"Created BOM item for {item.ItemNo ?? item.PartName}" : $"Failed to create BOM item for {item.ItemNo ?? item.PartName}", bomId.HasValue ? Color.Green : Color.Red);
+                            }
+                        }
+                    }
                     else
+                    {
                         failureCount++;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -274,79 +410,41 @@ namespace ExportDXF.Services
 
             LogProgress(context, $"Export complete: {successCount} succeeded, {failureCount} failed",
                 failureCount > 0 ? Color.DarkBlue : Color.Green);
-
-            // Create BOM Excel file
-            CreateBomExcelFile(items, saveDirectory, context);
         }
 
         #endregion
 
-        #region BOM Excel Creation
+        #region Temp + Upload Helpers
 
-        private void CreateBomExcelFile(List<Item> items, string saveDirectory, ExportContext context)
+        private string CreateTempWorkDir()
         {
-            try
-            {
-                var bomFileName = GetBomFileName(context.FilePrefix);
-                var bomFilePath = Path.Combine(saveDirectory, bomFileName + ".xlsx");
-
-                _bomExcelExporter.CreateBOMExcelFile(bomFilePath, items);
-
-                LogProgress(context, $"Created BOM Excel file: {bomFileName}.xlsx", Color.Green);
-            }
-            catch (Exception ex)
-            {
-                LogProgress(context, $"Failed to create BOM Excel: {ex.Message}", Color.Red);
-            }
+            var path = Path.Combine(Path.GetTempPath(), "ExportDXF-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(path);
+            return path;
         }
 
-        private string GetBomFileName(string prefix)
+        private string ParseDrawingNumber(ExportContext context)
         {
-            if (string.IsNullOrWhiteSpace(prefix))
-                return "BOM";
-
-            var drawingInfo = DrawingInfo.Parse(prefix);
-
-            if (drawingInfo != null)
+            // Prefer prefix (e.g., "5007 A02 PT"), fallback to active document title
+            var candidate = context?.FilePrefix;
+            var info = string.IsNullOrWhiteSpace(candidate) ? null : DrawingInfo.Parse(candidate);
+            if (info == null)
             {
-                return $"{drawingInfo.JobNo} {drawingInfo.DrawingNo} BOM";
+                var title = context?.ActiveDocument?.Title;
+                info = string.IsNullOrWhiteSpace(title) ? null : DrawingInfo.Parse(title);
             }
-
-            return prefix.Trim() + " BOM";
+            return info != null ? ($"{info.EquipmentNo} {info.DrawingNo}") : null;
         }
 
-        #endregion
-
-        #region User Interaction
-
-        private string PromptUserForDirectory(ExportContext context)
+        private string CreateZipWithSingleFile(string filePath)
         {
-            // Check if already canceled
-            if (context.CancellationToken.IsCancellationRequested)
-                return null;
-
-            string selectedPath = null;
-
-            // Must run on STA thread for FolderBrowserDialog
-            var thread = new System.Threading.Thread(() =>
+            var zipPath = Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath) + ".zip");
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+            using (var zip = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Create))
             {
-                using (var dialog = new FolderBrowserDialog())
-                {
-                    dialog.Description = "Where do you want to save the DXF files?";
-                    dialog.ShowNewFolderButton = true;
-
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        selectedPath = dialog.SelectedPath;
-                    }
-                }
-            });
-
-            thread.SetApartmentState(System.Threading.ApartmentState.STA);
-            thread.Start();
-            thread.Join();
-
-            return selectedPath;
+                zip.CreateEntryFromFile(filePath, Path.GetFileName(filePath));
+            }
+            return zipPath;
         }
 
         #endregion
@@ -372,3 +470,5 @@ namespace ExportDXF.Services
         #endregion
     }
 }
+
+
