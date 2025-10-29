@@ -352,11 +352,32 @@ namespace ExportDXF.Services
                     // PartExporter will handle template drawing creation through context
                     _partExporter.ExportItem(item, saveDirectory, context);
 
+                    // Always create BOM item first if we have a drawing
+                    if (drawingId.HasValue)
+                    {
+                        var dto = new
+                        {
+                            DrawingID = drawingId.Value,
+                            ItemNo = item.ItemNo,
+                            PartNo = !string.IsNullOrEmpty(item.FileName) ? item.FileName : item.PartName,
+                            Qty = (int?)item.Quantity,
+                            Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description,
+                            PartName = string.IsNullOrWhiteSpace(item.PartName) ? null : item.PartName,
+                            ConfigurationName = string.IsNullOrWhiteSpace(item.Configuration) ? null : item.Configuration,
+                            Material = string.IsNullOrWhiteSpace(item.Material) ? null : item.Material,
+                            SortOrder = 0,
+                            CutTemplateID = (int?)null,
+                            FormProgramID = (int?)null
+                        };
+                        var bomId = _apiClient.CreateBomItemAsync(dto).GetAwaiter().GetResult();
+                        LogProgress(context, bomId.HasValue ? $"Created BOM item for {item.ItemNo ?? item.PartName}" : $"Failed to create BOM item for {item.ItemNo ?? item.PartName}", bomId.HasValue ? Color.Green : Color.Red);
+                    }
+
                     if (!string.IsNullOrEmpty(item.FileName))
                     {
                         successCount++;
 
-                        // If we know the drawing, upload DXF and BOM row immediately
+                        // If we know the drawing, upload DXF
                         if (drawingId.HasValue)
                         {
                             var dxfPath = Path.Combine(saveDirectory, item.FileName + ".dxf");
@@ -366,31 +387,16 @@ namespace ExportDXF.Services
                                 string zipPath = CreateZipWithSingleFile(dxfPath);
                                 try
                                 {
-                                    var okZip = _apiClient.UploadDxfZipAsync(drawingId.Value, zipPath).GetAwaiter().GetResult();
+                                    // Pass thickness and kfactor from the item
+                                    double? thickness = item.Thickness > 0 ? item.Thickness : (double?)null;
+                                    double? kfactor = item.KFactor > 0 ? item.KFactor : (double?)null;
+                                    var okZip = _apiClient.UploadDxfZipAsync(drawingId.Value, zipPath, thickness, kfactor).GetAwaiter().GetResult();
                                     LogProgress(context, okZip ? $"Uploaded DXF: {Path.GetFileName(dxfPath)}" : $"Failed to upload DXF: {Path.GetFileName(dxfPath)}", okZip ? Color.Green : Color.Red);
                                 }
                                 finally
                                 {
                                     try { if (File.Exists(zipPath)) File.Delete(zipPath); } catch { }
                                 }
-
-                                // Create BOM item
-                                var dto = new
-                                {
-                                    DrawingID = drawingId.Value,
-                                    ItemNo = item.ItemNo,
-                                    PartNo = item.FileName,
-                                    Qty = (int?)item.Quantity,
-                                    Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description,
-                                    PartName = string.IsNullOrWhiteSpace(item.PartName) ? null : item.PartName,
-                                    ConfigurationName = string.IsNullOrWhiteSpace(item.Configuration) ? null : item.Configuration,
-                                    Material = string.IsNullOrWhiteSpace(item.Material) ? null : item.Material,
-                                    SortOrder = 0,
-                                    CutTemplateID = (int?)null,
-                                    FormProgramID = (int?)null
-                                };
-                                var bomId = _apiClient.CreateBomItemAsync(dto).GetAwaiter().GetResult();
-                                LogProgress(context, bomId.HasValue ? $"Created BOM item for {item.ItemNo ?? item.PartName}" : $"Failed to create BOM item for {item.ItemNo ?? item.PartName}", bomId.HasValue ? Color.Green : Color.Red);
                             }
                         }
                     }
