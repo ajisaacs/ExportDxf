@@ -38,7 +38,7 @@ namespace ExportDXF.Forms
         protected override async void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            button1.Enabled = false;
+            runButton.Enabled = false;
             await InitializeAsync();
         }
         private async Task InitializeAsync()
@@ -50,7 +50,7 @@ namespace ExportDXF.Forms
                 _solidWorksService.ActiveDocumentChanged += OnActiveDocumentChanged;
                 LogMessage("Ready", Color.Green);
                 UpdateActiveDocumentDisplay();
-                button1.Enabled = true;
+                runButton.Enabled = true;
                 // Populate equipment and (initial) drawings
                 await PopulateEquipmentAsync();
             }
@@ -99,13 +99,29 @@ namespace ExportDXF.Forms
                 var selected = equipmentNoBox.SelectedItem as CutFabApiClient.ApiEquipment;
                 if (selected == null)
                 {
-                    comboBox2.DataSource = null;
+                    drawingNoBox.DataSource = null;
                     return;
                 }
+
+                // Store the currently selected drawing number
+                var currentSelectedDrawing = drawingNoBox.SelectedItem as CutFabApiClient.ApiDrawingSummary;
+                var previousDrawingNumber = currentSelectedDrawing?.DrawingNumber;
+
                 var drawings = await _apiClient.GetDrawingsForEquipmentAsync(selected.ID);
-                comboBox2.DisplayMember = nameof(CutFabApiClient.ApiDrawingSummary.DrawingNumber);
-                comboBox2.ValueMember = nameof(CutFabApiClient.ApiDrawingSummary.ID);
-                comboBox2.DataSource = drawings;
+                drawingNoBox.DisplayMember = nameof(CutFabApiClient.ApiDrawingSummary.DrawingNumber);
+                drawingNoBox.ValueMember = nameof(CutFabApiClient.ApiDrawingSummary.ID);
+                drawingNoBox.DataSource = drawings;
+
+                // Try to restore the previous selection if it exists in the new list
+                if (!string.IsNullOrEmpty(previousDrawingNumber) && drawings.Count > 0)
+                {
+                    var matchingDrawing = drawings.FirstOrDefault(d => d.DrawingNumber == previousDrawingNumber);
+                    if (matchingDrawing != null)
+                    {
+                        drawingNoBox.SelectedItem = matchingDrawing;
+                    }
+                }
+
                 LogMessage($"Loaded {drawings.Count} drawing(s) for equipment {selected.EquipmentNumber}");
             }
             catch (Exception ex)
@@ -129,8 +145,8 @@ namespace ExportDXF.Forms
                 items.Remove(automatic);
                 items.Insert(0, automatic);
             }
-            comboBox1.DataSource = items;
-            comboBox1.DisplayMember = "Name";
+            viewFlipDeciderBox.DataSource = items;
+            viewFlipDeciderBox.DisplayMember = "Name";
         }
         private async void button1_Click(object sender, EventArgs e)
         {
@@ -157,7 +173,7 @@ namespace ExportDXF.Forms
                     return;
                 }
                 var viewFlipDecider = GetSelectedViewFlipDecider();
-                var drawingNumberText = comboBox2.Text?.Trim();
+                var drawingNumberText = drawingNoBox.Text?.Trim();
                 var selectedEquipment = equipmentNoBox.SelectedItem as CutFabApiClient.ApiEquipment;
                 var exportContext = new ExportContext
                 {
@@ -190,30 +206,30 @@ namespace ExportDXF.Forms
         }
         private void CancelExport()
         {
-            button1.Enabled = false;
+            runButton.Enabled = false;
             _cancellationTokenSource?.Cancel();
         }
         private IViewFlipDecider GetSelectedViewFlipDecider()
         {
-            var item = comboBox1.SelectedItem as ViewFlipDeciderComboboxItem;
+            var item = viewFlipDeciderBox.SelectedItem as ViewFlipDeciderComboboxItem;
             return item?.ViewFlipDecider;
         }
         private void UpdateUIForExportStart()
         {
             activeDocTitleBox.Enabled = false;
-            comboBox1.Enabled = false;
-            button1.Image = Properties.Resources.stop_alt;
-            if (richTextBox1.TextLength != 0)
+            viewFlipDeciderBox.Enabled = false;
+            runButton.Image = Properties.Resources.stop_alt;
+            if (logTextBox.TextLength != 0)
             {
-                richTextBox1.AppendText("\n\n");
+                logTextBox.AppendText("\n\n");
             }
         }
         private void UpdateUIForExportComplete()
         {
             activeDocTitleBox.Enabled = true;
-            comboBox1.Enabled = true;
-            button1.Image = Properties.Resources.play;
-            button1.Enabled = true;
+            viewFlipDeciderBox.Enabled = true;
+            runButton.Image = Properties.Resources.play;
+            runButton.Enabled = true;
         }
         private void OnActiveDocumentChanged(object sender, EventArgs e)
         {
@@ -233,19 +249,18 @@ namespace ExportDXF.Forms
         private void UpdatePrefixFromActiveDocument()
         {
             var activeDoc = _solidWorksService.GetActiveDocument();
+
             if (activeDoc == null)
-            {
                 return;
-            }
+
             if (activeDoc.DocumentType == DocumentType.Drawing)
             {
                 var drawingInfo = DrawingInfo.Parse(activeDoc.Title);
+
                 if (drawingInfo != null)
                 {
+                    drawingNoBox.Text = drawingInfo.ToString();
                 }
-            }
-            else
-            {
             }
         }
         private void activeDocTitleBox_TextChanged(object sender, EventArgs e)
@@ -261,13 +276,13 @@ namespace ExportDXF.Forms
             }
             if (color.HasValue)
             {
-                richTextBox1.AppendText(message + System.Environment.NewLine, color.Value);
+                logTextBox.AppendText(message + System.Environment.NewLine, color.Value);
             }
             else
             {
-                richTextBox1.AppendText(message + System.Environment.NewLine);
+                logTextBox.AppendText(message + System.Environment.NewLine);
             }
-            richTextBox1.ScrollToCaret();
+            logTextBox.ScrollToCaret();
         }
     }
 }

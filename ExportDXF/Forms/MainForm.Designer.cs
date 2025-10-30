@@ -29,15 +29,15 @@
         private void InitializeComponent()
         {
             this.activeDocTitleBox = new System.Windows.Forms.TextBox();
-            this.richTextBox1 = new System.Windows.Forms.RichTextBox();
+            this.logTextBox = new System.Windows.Forms.RichTextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
+            this.runButton = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.viewFlipDeciderBox = new System.Windows.Forms.ComboBox();
             this.label4 = new System.Windows.Forms.Label();
             this.equipmentNoBox = new System.Windows.Forms.ComboBox();
             this.label5 = new System.Windows.Forms.Label();
-            this.comboBox2 = new System.Windows.Forms.ComboBox();
+            this.drawingNoBox = new System.Windows.Forms.ComboBox();
             this.SuspendLayout();
             // 
             // activeDocTitleBox
@@ -52,18 +52,18 @@
             this.activeDocTitleBox.TabIndex = 1;
             this.activeDocTitleBox.TextChanged += new System.EventHandler(this.activeDocTitleBox_TextChanged);
             // 
-            // richTextBox1
+            // logTextBox
             // 
-            this.richTextBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.logTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.richTextBox1.BackColor = System.Drawing.Color.White;
-            this.richTextBox1.Location = new System.Drawing.Point(12, 106);
-            this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.ReadOnly = true;
-            this.richTextBox1.Size = new System.Drawing.Size(866, 556);
-            this.richTextBox1.TabIndex = 10;
-            this.richTextBox1.Text = "";
+            this.logTextBox.BackColor = System.Drawing.Color.White;
+            this.logTextBox.Location = new System.Drawing.Point(12, 106);
+            this.logTextBox.Name = "logTextBox";
+            this.logTextBox.ReadOnly = true;
+            this.logTextBox.Size = new System.Drawing.Size(866, 556);
+            this.logTextBox.TabIndex = 10;
+            this.logTextBox.Text = "";
             // 
             // label1
             // 
@@ -74,17 +74,17 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "Active document :";
             // 
-            // button1
+            // runButton
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Image = global::ExportDXF.Properties.Resources.play;
-            this.button1.Location = new System.Drawing.Point(884, 13);
-            this.button1.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(46, 56);
-            this.button1.TabIndex = 11;
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.runButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.runButton.Image = global::ExportDXF.Properties.Resources.play;
+            this.runButton.Location = new System.Drawing.Point(884, 13);
+            this.runButton.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.runButton.Name = "runButton";
+            this.runButton.Size = new System.Drawing.Size(46, 56);
+            this.runButton.TabIndex = 11;
+            this.runButton.UseVisualStyleBackColor = true;
+            this.runButton.Click += new System.EventHandler(this.button1_Click);
             // 
             // label3
             // 
@@ -95,14 +95,14 @@
             this.label3.TabIndex = 2;
             this.label3.Text = "View flip decider :";
             // 
-            // comboBox1
+            // viewFlipDeciderBox
             // 
-            this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(130, 44);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(432, 25);
-            this.comboBox1.TabIndex = 3;
+            this.viewFlipDeciderBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.viewFlipDeciderBox.FormattingEnabled = true;
+            this.viewFlipDeciderBox.Location = new System.Drawing.Point(130, 44);
+            this.viewFlipDeciderBox.Name = "viewFlipDeciderBox";
+            this.viewFlipDeciderBox.Size = new System.Drawing.Size(432, 25);
+            this.viewFlipDeciderBox.TabIndex = 3;
             // 
             // label4
             // 
@@ -131,28 +131,28 @@
             this.label5.TabIndex = 6;
             this.label5.Text = "Drawing #";
             // 
-            // comboBox2
+            // drawingNoBox
             // 
-            this.comboBox2.FormattingEnabled = true;
-            this.comboBox2.Location = new System.Drawing.Point(388, 75);
-            this.comboBox2.Name = "comboBox2";
-            this.comboBox2.Size = new System.Drawing.Size(174, 25);
-            this.comboBox2.TabIndex = 7;
+            this.drawingNoBox.FormattingEnabled = true;
+            this.drawingNoBox.Location = new System.Drawing.Point(388, 75);
+            this.drawingNoBox.Name = "drawingNoBox";
+            this.drawingNoBox.Size = new System.Drawing.Size(174, 25);
+            this.drawingNoBox.TabIndex = 7;
             // 
             // MainForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(942, 674);
-            this.Controls.Add(this.comboBox2);
+            this.Controls.Add(this.drawingNoBox);
             this.Controls.Add(this.equipmentNoBox);
             this.Controls.Add(this.label5);
-            this.Controls.Add(this.comboBox1);
+            this.Controls.Add(this.viewFlipDeciderBox);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.richTextBox1);
+            this.Controls.Add(this.logTextBox);
             this.Controls.Add(this.activeDocTitleBox);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.runButton);
             this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.MaximizeBox = false;
@@ -167,16 +167,16 @@
 
         #endregion
 
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button runButton;
         private System.Windows.Forms.TextBox activeDocTitleBox;
-        private System.Windows.Forms.RichTextBox richTextBox1;
+        private System.Windows.Forms.RichTextBox logTextBox;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.ComboBox viewFlipDeciderBox;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.ComboBox equipmentNoBox;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.ComboBox comboBox2;
+        private System.Windows.Forms.ComboBox drawingNoBox;
     }
 }
 
