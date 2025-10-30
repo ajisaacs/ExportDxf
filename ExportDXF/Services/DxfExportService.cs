@@ -387,10 +387,12 @@ namespace ExportDXF.Services
                                 string zipPath = CreateZipWithSingleFile(dxfPath);
                                 try
                                 {
-                                    // Pass thickness and kfactor from the item
+                                    // Pass thickness, kfactor, default bend radius and material from the item
                                     double? thickness = item.Thickness > 0 ? item.Thickness : (double?)null;
                                     double? kfactor = item.KFactor > 0 ? item.KFactor : (double?)null;
-                                    var okZip = _apiClient.UploadDxfZipAsync(drawingId.Value, zipPath, thickness, kfactor).GetAwaiter().GetResult();
+                                    double? defaultBendRadius = item.BendRadius > 0 ? item.BendRadius : (double?)null;
+                                    string material = string.IsNullOrWhiteSpace(item.Material) ? null : item.Material;
+                                    var okZip = _apiClient.UploadDxfZipAsync(drawingId.Value, zipPath, thickness, kfactor, defaultBendRadius, material).GetAwaiter().GetResult();
                                     LogProgress(context, okZip ? $"Uploaded DXF: {Path.GetFileName(dxfPath)}" : $"Failed to upload DXF: {Path.GetFileName(dxfPath)}", okZip ? Color.Green : Color.Red);
                                 }
                                 finally

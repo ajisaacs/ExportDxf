@@ -18,7 +18,13 @@ namespace ExportDXF.Services
         Task<int?> CreateDrawingAsync(int equipmentId, string drawingNumber);
         Task<CutFabApiClient.ApiResponse<int?>> CreateDrawingWithInfoAsync(int equipmentId, string drawingNumber);
         Task<bool> UploadDrawingPdfAsync(string drawingNumber, string pdfPath, string uploadedBy = null, string notes = null);
-        Task<bool> UploadDxfZipAsync(int drawingId, string zipPath, double? thickness = null, double? kfactor = null);
+        Task<bool> UploadDxfZipAsync(
+            int drawingId,
+            string zipPath,
+            double? thickness = null,
+            double? kfactor = null,
+            double? defaultBendRadius = null,
+            string material = null);
         Task<int?> CreateBomItemAsync(object upsertBomItemDto);
         Task<bool> AutoLinkTemplatesAsync(int drawingId);
         Task<List<ApiEquipment>> GetEquipmentAsync();
@@ -162,7 +168,7 @@ namespace ExportDXF.Services
             }
         }
 
-        public async Task<bool> UploadDxfZipAsync(int drawingId, string zipPath, double? thickness = null, double? kfactor = null)
+        public async Task<bool> UploadDxfZipAsync(int drawingId, string zipPath, double? thickness = null, double? kfactor = null, double? defaultBendRadius = null, string material = null)
         {
             if (!File.Exists(zipPath)) return false;
             using (var form = new MultipartFormDataContent())
@@ -177,6 +183,11 @@ namespace ExportDXF.Services
                     form.Add(new StringContent(thickness.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)), "thickness");
                 if (kfactor.HasValue)
                     form.Add(new StringContent(kfactor.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)), "kfactor");
+                // Add default bend radius and material if provided
+                if (defaultBendRadius.HasValue)
+                    form.Add(new StringContent(defaultBendRadius.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)), "defaultBendRadius");
+                if (!string.IsNullOrWhiteSpace(material))
+                    form.Add(new StringContent(material), "material");
 
                 var resp = await _http.PostAsync($"{_baseUrl}/api/Drawings/{drawingId}/upload-dxf-templates", form).ConfigureAwait(false);
                 return resp.IsSuccessStatusCode;
