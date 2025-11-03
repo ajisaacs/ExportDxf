@@ -29,6 +29,8 @@ namespace ExportDXF.Services
         Task<bool> AutoLinkTemplatesAsync(int drawingId);
         Task<List<ApiEquipment>> GetEquipmentAsync();
         Task<List<ApiDrawingSummary>> GetDrawingsForEquipmentAsync(int equipmentId);
+        Task<List<ApiBomItem>> GetBomItemsForDrawingAsync(int drawingId);
+        Task<List<ApiCutTemplate>> GetCutTemplatesAsync();
     }
 
     public class CutFabApiClient : ICutFabApiClient, IDisposable
@@ -227,6 +229,92 @@ namespace ExportDXF.Services
             return resp.IsSuccessStatusCode;
         }
 
+        public async Task<List<ApiBomItem>> GetBomItemsForDrawingAsync(int drawingId)
+        {
+            var url = $"{_baseUrl}/api/BomItems/drawing/{drawingId}";
+            var resp = await _http.GetAsync(url).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode) return new List<ApiBomItem>();
+            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var serializer = new JavaScriptSerializer();
+            var raw = serializer.DeserializeObject(json);
+            var result = new List<ApiBomItem>();
+
+            if (raw is System.Collections.IEnumerable enumerable && !(raw is string))
+            {
+                foreach (var item in enumerable)
+                {
+                    var dict = item as Dictionary<string, object>;
+                    if (dict == null) continue;
+                    var bomItem = new ApiBomItem();
+                    object v;
+                    if (TryGetCI(dict, new[] { "ID", "id" }, out v)) bomItem.ID = ToInt(v);
+                    if (TryGetCI(dict, new[] { "ItemNo", "itemNo" }, out v)) bomItem.ItemNo = v?.ToString();
+                    if (TryGetCI(dict, new[] { "PartNo", "partNo" }, out v)) bomItem.PartNo = v?.ToString();
+                    if (TryGetCI(dict, new[] { "SortOrder", "sortOrder" }, out v)) bomItem.SortOrder = ToInt(v);
+                    if (TryGetCI(dict, new[] { "Qty", "qty" }, out v)) bomItem.Qty = v != null ? (int?)ToInt(v) : null;
+                    if (TryGetCI(dict, new[] { "TotalQty", "totalQty" }, out v)) bomItem.TotalQty = v != null ? (int?)ToInt(v) : null;
+                    if (TryGetCI(dict, new[] { "Description", "description" }, out v)) bomItem.Description = v?.ToString();
+                    if (TryGetCI(dict, new[] { "PartName", "partName" }, out v)) bomItem.PartName = v?.ToString();
+                    if (TryGetCI(dict, new[] { "ConfigurationName", "configurationName" }, out v)) bomItem.ConfigurationName = v?.ToString();
+                    if (TryGetCI(dict, new[] { "Material", "material" }, out v)) bomItem.Material = v?.ToString();
+                    if (TryGetCI(dict, new[] { "DrawingID", "drawingID", "drawingId" }, out v)) bomItem.DrawingID = ToInt(v);
+                    if (TryGetCI(dict, new[] { "CutTemplateID", "cutTemplateID", "cutTemplateId" }, out v)) bomItem.CutTemplateID = v != null ? (int?)ToInt(v) : null;
+
+                    // Try to get CutTemplate info if available
+                    if (TryGetCI(dict, new[] { "CutTemplate", "cutTemplate" }, out v))
+                    {
+                        var templateDict = v as Dictionary<string, object>;
+                        if (templateDict != null)
+                        {
+                            object tv;
+                            if (TryGetCI(templateDict, new[] { "Name", "name" }, out tv)) bomItem.CutTemplateName = tv?.ToString();
+                            if (TryGetCI(templateDict, new[] { "Thickness", "thickness" }, out tv)) bomItem.Thickness = ToDouble(tv);
+                            if (TryGetCI(templateDict, new[] { "KFactor", "kFactor", "kfactor" }, out tv)) bomItem.KFactor = ToDouble(tv);
+                            if (TryGetCI(templateDict, new[] { "DefaultBendRadius", "defaultBendRadius" }, out tv)) bomItem.DefaultBendRadius = ToDouble(tv);
+                        }
+                    }
+
+                    result.Add(bomItem);
+                }
+            }
+
+            return result;
+        }
+
+        public async Task<List<ApiCutTemplate>> GetCutTemplatesAsync()
+        {
+            var url = $"{_baseUrl}/api/CutTemplates";
+            var resp = await _http.GetAsync(url).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode) return new List<ApiCutTemplate>();
+            var json = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var serializer = new JavaScriptSerializer();
+            var raw = serializer.DeserializeObject(json);
+            var result = new List<ApiCutTemplate>();
+
+            if (raw is System.Collections.IEnumerable enumerable && !(raw is string))
+            {
+                foreach (var item in enumerable)
+                {
+                    var dict = item as Dictionary<string, object>;
+                    if (dict == null) continue;
+                    var template = new ApiCutTemplate();
+                    object v;
+                    if (TryGetCI(dict, new[] { "ID", "id" }, out v)) template.ID = ToInt(v);
+                    if (TryGetCI(dict, new[] { "Name", "name" }, out v)) template.Name = v?.ToString();
+                    if (TryGetCI(dict, new[] { "FilePath", "filePath" }, out v)) template.FilePath = v?.ToString();
+                    if (TryGetCI(dict, new[] { "Description", "description" }, out v)) template.Description = v?.ToString();
+                    if (TryGetCI(dict, new[] { "Material", "material" }, out v)) template.Material = v?.ToString();
+                    if (TryGetCI(dict, new[] { "Thickness", "thickness" }, out v)) template.Thickness = ToDouble(v);
+                    if (TryGetCI(dict, new[] { "KFactor", "kFactor", "kfactor" }, out v)) template.KFactor = ToDouble(v);
+                    if (TryGetCI(dict, new[] { "DefaultBendRadius", "defaultBendRadius" }, out v)) template.DefaultBendRadius = ToDouble(v);
+                    if (TryGetCI(dict, new[] { "Version", "version" }, out v)) template.Version = ToInt(v);
+                    result.Add(template);
+                }
+            }
+
+            return result;
+        }
+
         public void Dispose()
         {
             _http?.Dispose();
@@ -247,6 +335,39 @@ namespace ExportDXF.Services
             public string DrawingNumber { get; set; }
             public string Description { get; set; }
             public override string ToString() => DrawingNumber ?? base.ToString();
+        }
+
+        public class ApiBomItem
+        {
+            public int ID { get; set; }
+            public string ItemNo { get; set; }
+            public string PartNo { get; set; }
+            public int SortOrder { get; set; }
+            public int? Qty { get; set; }
+            public int? TotalQty { get; set; }
+            public string Description { get; set; }
+            public string PartName { get; set; }
+            public string ConfigurationName { get; set; }
+            public string Material { get; set; }
+            public int DrawingID { get; set; }
+            public int? CutTemplateID { get; set; }
+            public string CutTemplateName { get; set; }
+            public double? Thickness { get; set; }
+            public double? KFactor { get; set; }
+            public double? DefaultBendRadius { get; set; }
+        }
+
+        public class ApiCutTemplate
+        {
+            public int ID { get; set; }
+            public string Name { get; set; }
+            public string FilePath { get; set; }
+            public string Description { get; set; }
+            public string Material { get; set; }
+            public double? Thickness { get; set; }
+            public double? KFactor { get; set; }
+            public double? DefaultBendRadius { get; set; }
+            public int Version { get; set; }
         }
 
         public async Task<List<ApiEquipment>> GetEquipmentAsync()
@@ -331,6 +452,17 @@ namespace ExportDXF.Services
             if (v is long l) return (int)l;
             if (v is double d) return (int)d;
             int parsed; if (int.TryParse(v.ToString(), out parsed)) return parsed; return 0;
+        }
+
+        private static double? ToDouble(object v)
+        {
+            if (v == null) return null;
+            if (v is double d) return d;
+            if (v is int i) return (double)i;
+            if (v is long l) return (double)l;
+            if (v is float f) return (double)f;
+            double parsed; if (double.TryParse(v.ToString(), out parsed)) return parsed;
+            return null;
         }
     }
 }
