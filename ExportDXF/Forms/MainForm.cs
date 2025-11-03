@@ -2,8 +2,8 @@ using ExportDXF.Extensions;
 using ExportDXF.Models;
 using ExportDXF.Services;
 using ExportDXF.ViewFlipDeciders;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.Information;
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
@@ -17,7 +17,13 @@ namespace ExportDXF.Forms
         private readonly IDxfExportService _exportService;
         private readonly ICutFabApiClient _apiClient;
         private CancellationTokenSource _cancellationTokenSource;
-        public MainForm(ISolidWorksService solidWorksService, IDxfExportService exportService, ICutFabApiClient apiClient)
+        private readonly BindingList<LogEvent> _logEvents;
+        private readonly BindingList<BomItem> _bomItems;
+        private readonly BindingList<CutFabApiClient.ApiCutTemplate> _cutTemplates;
+        private readonly int _selectedDrawingId;
+        private readonly string _selectedDrawingNumber;
+
+        public MainForm(ISolidWorksService solidWorksService, IDxfExportService exportService, ICutFabApiClient apiClient, int selectedDrawingId, string selectedDrawingNumber)
         {
             InitializeComponent();
             _solidWorksService = solidWorksService ??
@@ -26,7 +32,15 @@ namespace ExportDXF.Forms
                 throw new ArgumentNullException(nameof(exportService));
             _apiClient = apiClient ??
                 throw new ArgumentNullException(nameof(apiClient));
+            _selectedDrawingId = selectedDrawingId;
+            _selectedDrawingNumber = selectedDrawingNumber ?? throw new ArgumentNullException(nameof(selectedDrawingNumber));
+            _logEvents = new BindingList<LogEvent>();
+            _bomItems = new BindingList<BomItem>();
+            _cutTemplates = new BindingList<CutFabApiClient.ApiCutTemplate>();
             InitializeViewFlipDeciders();
+            InitializeLogEventsGrid();
+            InitializeBomGrid();
+            InitializeCutTemplatesGrid();
         }
         ~MainForm()
         {
@@ -51,8 +65,13 @@ namespace ExportDXF.Forms
                 LogMessage("Ready", Color.Green);
                 UpdateActiveDocumentDisplay();
                 runButton.Enabled = true;
-                // Populate equipment and (initial) drawings
-                await PopulateEquipmentAsync();
+
+                // Load the selected drawing's BOM items
+                LogMessage($"Loading BOM items for drawing {_selectedDrawingNumber}...");
+                await LoadBomItemsForDrawingAsync(_selectedDrawingId);
+
+                // Load cut templates
+                await LoadCutTemplatesAsync();
             }
             catch (Exception ex)
             {
@@ -61,74 +80,70 @@ namespace ExportDXF.Forms
                 Application.Exit();
             }
         }
-        private async Task PopulateEquipmentAsync()
+        private async Task LoadBomItemsForDrawingAsync(int drawingId)
         {
             try
             {
-                LogMessage($"Loading equipment from {_apiClient.BaseUrl} ...");
-                var list = await _apiClient.GetEquipmentAsync();
-                equipmentNoBox.DisplayMember = nameof(CutFabApiClient.ApiEquipment.EquipmentNumber);
-                equipmentNoBox.ValueMember = nameof(CutFabApiClient.ApiEquipment.ID);
-                equipmentNoBox.DataSource = list;
-                equipmentNoBox.SelectedIndexChanged -= equipmentNoBox_SelectedIndexChanged;
-                equipmentNoBox.SelectedIndexChanged += equipmentNoBox_SelectedIndexChanged;
-                if (list != null && list.Count > 0)
-                {
-                    equipmentNoBox.SelectedIndex = 0;
-                    await PopulateDrawingsForSelectedEquipmentAsync();
-                    LogMessage($"Loaded {list.Count} equipment record(s)", Color.Green);
-                }
-                else
-                {
-                    LogMessage("No equipment returned by API", Color.DarkBlue);
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Failed to load equipment: {ex.Message}", Color.Red);
-            }
-        }
-        private async void equipmentNoBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            await PopulateDrawingsForSelectedEquipmentAsync();
-        }
-        private async Task PopulateDrawingsForSelectedEquipmentAsync()
-        {
-            try
-            {
-                var selected = equipmentNoBox.SelectedItem as CutFabApiClient.ApiEquipment;
-                if (selected == null)
-                {
-                    drawingNoBox.DataSource = null;
-                    return;
-                }
+                _bomItems.Clear();
 
-                // Store the currently selected drawing number
-                var currentSelectedDrawing = drawingNoBox.SelectedItem as CutFabApiClient.ApiDrawingSummary;
-                var previousDrawingNumber = currentSelectedDrawing?.DrawingNumber;
+                var apiBomItems = await _apiClient.GetBomItemsForDrawingAsync(drawingId);
 
-                var drawings = await _apiClient.GetDrawingsForEquipmentAsync(selected.ID);
-                drawingNoBox.DisplayMember = nameof(CutFabApiClient.ApiDrawingSummary.DrawingNumber);
-                drawingNoBox.ValueMember = nameof(CutFabApiClient.ApiDrawingSummary.ID);
-                drawingNoBox.DataSource = drawings;
-
-                // Try to restore the previous selection if it exists in the new list
-                if (!string.IsNullOrEmpty(previousDrawingNumber) && drawings.Count > 0)
+                foreach (var apiItem in apiBomItems)
                 {
-                    var matchingDrawing = drawings.FirstOrDefault(d => d.DrawingNumber == previousDrawingNumber);
-                    if (matchingDrawing != null)
+                    var bomItem = new BomItem
                     {
-                        drawingNoBox.SelectedItem = matchingDrawing;
-                    }
+                        ID = apiItem.ID,
+                        ItemNo = apiItem.ItemNo ?? "",
+                        PartNo = apiItem.PartNo ?? "",
+                        SortOrder = apiItem.SortOrder,
+                        Qty = apiItem.Qty,
+                        TotalQty = apiItem.TotalQty,
+                        Description = apiItem.Description ?? "",
+                        PartName = apiItem.PartName ?? "",
+                        ConfigurationName = apiItem.ConfigurationName ?? "",
+                        Material = apiItem.Material ?? "",
+                        DrawingID = apiItem.DrawingID,
+                        CutTemplateID = apiItem.CutTemplateID,
+                        CutTemplateName = apiItem.CutTemplateName ?? "",
+                        Thickness = apiItem.Thickness,
+                        KFactor = apiItem.KFactor,
+                        DefaultBendRadius = apiItem.DefaultBendRadius
+                    };
+
+                    _bomItems.Add(bomItem);
                 }
 
-                LogMessage($"Loaded {drawings.Count} drawing(s) for equipment {selected.EquipmentNumber}");
+                LogMessage($"Loaded {apiBomItems.Count} BOM item(s)", Color.Green);
             }
             catch (Exception ex)
             {
-                LogMessage($"Failed to load drawings: {ex.Message}", Color.Red);
+                LogMessage($"Failed to load BOM items: {ex.Message}", Color.Red);
             }
         }
+
+        private async Task LoadCutTemplatesAsync()
+        {
+            try
+            {
+                _cutTemplates.Clear();
+
+                LogMessage("Loading cut templates...");
+
+                var apiCutTemplates = await _apiClient.GetCutTemplatesAsync();
+
+                foreach (var template in apiCutTemplates)
+                {
+                    _cutTemplates.Add(template);
+                }
+
+                LogMessage($"Loaded {apiCutTemplates.Count} cut template(s)", Color.Green);
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Failed to load cut templates: {ex.Message}", Color.Red);
+            }
+        }
+
         private void InitializeViewFlipDeciders()
         {
             var items = ViewFlipDeciderFactory.GetAvailableDeciders()
@@ -148,6 +163,187 @@ namespace ExportDXF.Forms
             viewFlipDeciderBox.DataSource = items;
             viewFlipDeciderBox.DisplayMember = "Name";
         }
+        private void InitializeLogEventsGrid()
+        {
+            // Clear any existing columns first
+            logEventsDataGrid.Columns.Clear();
+
+            // Configure grid settings
+            logEventsDataGrid.AutoGenerateColumns = false;
+            logEventsDataGrid.AllowUserToAddRows = false;
+            logEventsDataGrid.AllowUserToDeleteRows = false;
+            logEventsDataGrid.ReadOnly = true;
+            logEventsDataGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            // Add columns
+            logEventsDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(LogEvent.Time),
+                HeaderText = "Time",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "HH:mm:ss" }
+            });
+
+            logEventsDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(LogEvent.Level),
+                HeaderText = "Level",
+                Width = 70
+            });
+
+            logEventsDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(LogEvent.Message),
+                HeaderText = "Message",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            });
+
+            // Set the data source AFTER adding columns
+            logEventsDataGrid.DataSource = _logEvents;
+        }
+
+        private void InitializeBomGrid()
+        {
+            // Clear any existing columns first
+            bomDataGrid.Columns.Clear();
+
+            // Configure grid settings
+            bomDataGrid.AutoGenerateColumns = false;
+            bomDataGrid.AllowUserToAddRows = false;
+            bomDataGrid.AllowUserToDeleteRows = false;
+            bomDataGrid.ReadOnly = true;
+            bomDataGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            // Add columns
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.ItemNo),
+                HeaderText = "Item #",
+                Width = 60
+            });
+
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.PartNo),
+                HeaderText = "Part #",
+                Width = 100
+            });
+
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.Qty),
+                HeaderText = "Qty",
+                Width = 50
+            });
+
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.Description),
+                HeaderText = "Description",
+                Width = 200
+            });
+
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.PartName),
+                HeaderText = "Part Name",
+                Width = 150
+            });
+
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.ConfigurationName),
+                HeaderText = "Configuration",
+                Width = 120
+            });
+
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.Material),
+                HeaderText = "Material",
+                Width = 120
+            });
+
+            bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(BomItem.CutTemplateName),
+                HeaderText = "Cut Template",
+                Width = 120
+            });
+
+            // Set the data source AFTER adding columns
+            bomDataGrid.DataSource = _bomItems;
+        }
+
+        private void InitializeCutTemplatesGrid()
+        {
+            // Clear any existing columns first
+            cutTemplatesDataGrid.Columns.Clear();
+
+            // Configure grid settings
+            cutTemplatesDataGrid.AutoGenerateColumns = false;
+            cutTemplatesDataGrid.AllowUserToAddRows = false;
+            cutTemplatesDataGrid.AllowUserToDeleteRows = false;
+            cutTemplatesDataGrid.ReadOnly = true;
+            cutTemplatesDataGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            // Add columns
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutFabApiClient.ApiCutTemplate.Name),
+                HeaderText = "Name",
+                Width = 200
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutFabApiClient.ApiCutTemplate.Material),
+                HeaderText = "Material",
+                Width = 120
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutFabApiClient.ApiCutTemplate.Thickness),
+                HeaderText = "Thickness",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "0.##" }
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutFabApiClient.ApiCutTemplate.KFactor),
+                HeaderText = "K-Factor",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "0.####" }
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutFabApiClient.ApiCutTemplate.DefaultBendRadius),
+                HeaderText = "Bend Radius",
+                Width = 90,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "0.##" }
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutFabApiClient.ApiCutTemplate.Version),
+                HeaderText = "Version",
+                Width = 70
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutFabApiClient.ApiCutTemplate.Description),
+                HeaderText = "Description",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            });
+
+            // Set the data source AFTER adding columns
+            cutTemplatesDataGrid.DataSource = _cutTemplates;
+        }
+
         private async void button1_Click(object sender, EventArgs e)
         {
             if (_cancellationTokenSource != null)
@@ -173,14 +369,12 @@ namespace ExportDXF.Forms
                     return;
                 }
                 var viewFlipDecider = GetSelectedViewFlipDecider();
-                var drawingNumberText = drawingNoBox.Text?.Trim();
-                var selectedEquipment = equipmentNoBox.SelectedItem as CutFabApiClient.ApiEquipment;
                 var exportContext = new ExportContext
                 {
                     ActiveDocument = activeDoc,
                     ViewFlipDecider = viewFlipDecider,
-                    FilePrefix = drawingNumberText,
-                    EquipmentId = selectedEquipment?.ID,
+                    FilePrefix = _selectedDrawingNumber,
+                    EquipmentId = null, // Not needed for export
                     CancellationToken = token,
                     ProgressCallback = LogMessage
                 };
@@ -216,17 +410,11 @@ namespace ExportDXF.Forms
         }
         private void UpdateUIForExportStart()
         {
-            activeDocTitleBox.Enabled = false;
             viewFlipDeciderBox.Enabled = false;
             runButton.Image = Properties.Resources.stop_alt;
-            if (logTextBox.TextLength != 0)
-            {
-                logTextBox.AppendText("\n\n");
-            }
         }
         private void UpdateUIForExportComplete()
         {
-            activeDocTitleBox.Enabled = true;
             viewFlipDeciderBox.Enabled = true;
             runButton.Image = Properties.Resources.play;
             runButton.Enabled = true;
@@ -239,50 +427,52 @@ namespace ExportDXF.Forms
                 return;
             }
             UpdateActiveDocumentDisplay();
-            UpdatePrefixFromActiveDocument();
         }
         private void UpdateActiveDocumentDisplay()
         {
             var activeDoc = _solidWorksService.GetActiveDocument();
-            activeDocTitleBox.Text = activeDoc?.Title ?? "<No Document Open>";
-        }
-        private void UpdatePrefixFromActiveDocument()
-        {
-            var activeDoc = _solidWorksService.GetActiveDocument();
-
-            if (activeDoc == null)
-                return;
-
-            if (activeDoc.DocumentType == DocumentType.Drawing)
-            {
-                var drawingInfo = DrawingInfo.Parse(activeDoc.Title);
-
-                if (drawingInfo != null)
-                {
-                    drawingNoBox.Text = drawingInfo.ToString();
-                }
-            }
-        }
-        private void activeDocTitleBox_TextChanged(object sender, EventArgs e)
-        {
-            UpdatePrefixFromActiveDocument();
+            var docTitle = activeDoc?.Title ?? "No Document Open";
+            this.Text = $"ExportDXF - {docTitle}";
         }
         private void LogMessage(string message, Color? color = null)
         {
+            var level = color.HasValue && color.Value == Color.Red ? LogLevel.Error :
+                        color.HasValue && color.Value == Color.Green ? LogLevel.Info :
+                        color.HasValue && color.Value == Color.DarkBlue ? LogLevel.Warning :
+                        LogLevel.Info;
+
+            AddLogEvent(level, LogAction.Start, message);
+        }
+
+        private void AddLogEvent(LogLevel level, LogAction action, string message, string equipment = "", string drawing = "", string part = "", string target = "", string result = "OK", int durationMs = 0)
+        {
             if (InvokeRequired)
             {
-                Invoke(new Action(() => LogMessage(message, color)));
+                Invoke(new Action(() => AddLogEvent(level, action, message, equipment, drawing, part, target, result, durationMs)));
                 return;
             }
-            if (color.HasValue)
+
+            var logEvent = new LogEvent
             {
-                logTextBox.AppendText(message + System.Environment.NewLine, color.Value);
-            }
-            else
+                Time = DateTime.Now,
+                Level = level,
+                Action = action,
+                Message = message,
+                Equipment = equipment,
+                Drawing = drawing,
+                Part = part,
+                Target = target,
+                Result = result,
+                DurationMs = durationMs
+            };
+
+            _logEvents.Add(logEvent);
+
+            // Auto-scroll to the last row
+            if (logEventsDataGrid.Rows.Count > 0)
             {
-                logTextBox.AppendText(message + System.Environment.NewLine);
+                logEventsDataGrid.FirstDisplayedScrollingRowIndex = logEventsDataGrid.Rows.Count - 1;
             }
-            logTextBox.ScrollToCaret();
         }
     }
 }

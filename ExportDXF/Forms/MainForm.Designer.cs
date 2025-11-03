@@ -28,68 +28,46 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.activeDocTitleBox = new System.Windows.Forms.TextBox();
-            this.logTextBox = new System.Windows.Forms.RichTextBox();
-            this.label1 = new System.Windows.Forms.Label();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.runButton = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.viewFlipDeciderBox = new System.Windows.Forms.ComboBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.equipmentNoBox = new System.Windows.Forms.ComboBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.drawingNoBox = new System.Windows.Forms.ComboBox();
+            this.mainTabControl = new System.Windows.Forms.TabControl();
+            this.logEventsTab = new System.Windows.Forms.TabPage();
+            this.logEventsDataGrid = new System.Windows.Forms.DataGridView();
+            this.bomTab = new System.Windows.Forms.TabPage();
+            this.bomDataGrid = new System.Windows.Forms.DataGridView();
+            this.cutTemplatesTab = new System.Windows.Forms.TabPage();
+            this.cutTemplatesDataGrid = new System.Windows.Forms.DataGridView();
+            this.dwgDetailsTab = new System.Windows.Forms.TabPage();
+            this.drawingPdfViewer = new AxAcroPDFLib.AxAcroPDF();
+            this.mainTabControl.SuspendLayout();
+            this.logEventsTab.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.logEventsDataGrid)).BeginInit();
+            this.bomTab.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.bomDataGrid)).BeginInit();
+            this.cutTemplatesTab.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.cutTemplatesDataGrid)).BeginInit();
+            this.dwgDetailsTab.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.drawingPdfViewer)).BeginInit();
             this.SuspendLayout();
-            // 
-            // activeDocTitleBox
-            // 
-            this.activeDocTitleBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.activeDocTitleBox.BackColor = System.Drawing.Color.White;
-            this.activeDocTitleBox.Location = new System.Drawing.Point(130, 13);
-            this.activeDocTitleBox.Name = "activeDocTitleBox";
-            this.activeDocTitleBox.ReadOnly = true;
-            this.activeDocTitleBox.Size = new System.Drawing.Size(748, 25);
-            this.activeDocTitleBox.TabIndex = 1;
-            this.activeDocTitleBox.TextChanged += new System.EventHandler(this.activeDocTitleBox_TextChanged);
-            // 
-            // logTextBox
-            // 
-            this.logTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logTextBox.BackColor = System.Drawing.Color.White;
-            this.logTextBox.Location = new System.Drawing.Point(12, 106);
-            this.logTextBox.Name = "logTextBox";
-            this.logTextBox.ReadOnly = true;
-            this.logTextBox.Size = new System.Drawing.Size(866, 556);
-            this.logTextBox.TabIndex = 10;
-            this.logTextBox.Text = "";
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(13, 16);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(111, 17);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Active document :";
             // 
             // runButton
             // 
             this.runButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.runButton.Image = global::ExportDXF.Properties.Resources.play;
-            this.runButton.Location = new System.Drawing.Point(884, 13);
+            this.runButton.Location = new System.Drawing.Point(790, 13);
             this.runButton.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.runButton.Name = "runButton";
-            this.runButton.Size = new System.Drawing.Size(46, 56);
+            this.runButton.Size = new System.Drawing.Size(100, 30);
             this.runButton.TabIndex = 11;
+            this.runButton.Text = "Start";
             this.runButton.UseVisualStyleBackColor = true;
             this.runButton.Click += new System.EventHandler(this.button1_Click);
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(12, 47);
+            this.label3.Location = new System.Drawing.Point(12, 20);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(112, 17);
             this.label3.TabIndex = 2;
@@ -99,59 +77,123 @@
             // 
             this.viewFlipDeciderBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.viewFlipDeciderBox.FormattingEnabled = true;
-            this.viewFlipDeciderBox.Location = new System.Drawing.Point(130, 44);
+            this.viewFlipDeciderBox.Location = new System.Drawing.Point(130, 17);
             this.viewFlipDeciderBox.Name = "viewFlipDeciderBox";
-            this.viewFlipDeciderBox.Size = new System.Drawing.Size(432, 25);
+            this.viewFlipDeciderBox.Size = new System.Drawing.Size(375, 25);
             this.viewFlipDeciderBox.TabIndex = 3;
             // 
-            // label4
+            // mainTabControl
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(42, 78);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(82, 17);
-            this.label4.TabIndex = 4;
-            this.label4.Text = "Equipment #";
+            this.mainTabControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.mainTabControl.Controls.Add(this.logEventsTab);
+            this.mainTabControl.Controls.Add(this.bomTab);
+            this.mainTabControl.Controls.Add(this.cutTemplatesTab);
+            this.mainTabControl.Controls.Add(this.dwgDetailsTab);
+            this.mainTabControl.Location = new System.Drawing.Point(15, 50);
+            this.mainTabControl.Name = "mainTabControl";
+            this.mainTabControl.Padding = new System.Drawing.Point(20, 5);
+            this.mainTabControl.SelectedIndex = 0;
+            this.mainTabControl.Size = new System.Drawing.Size(879, 594);
+            this.mainTabControl.TabIndex = 12;
             // 
-            // equipmentNoBox
+            // logEventsTab
             // 
-            this.equipmentNoBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.equipmentNoBox.FormattingEnabled = true;
-            this.equipmentNoBox.Location = new System.Drawing.Point(130, 75);
-            this.equipmentNoBox.Name = "equipmentNoBox";
-            this.equipmentNoBox.Size = new System.Drawing.Size(138, 25);
-            this.equipmentNoBox.TabIndex = 5;
+            this.logEventsTab.Controls.Add(this.logEventsDataGrid);
+            this.logEventsTab.Location = new System.Drawing.Point(4, 30);
+            this.logEventsTab.Name = "logEventsTab";
+            this.logEventsTab.Padding = new System.Windows.Forms.Padding(3);
+            this.logEventsTab.Size = new System.Drawing.Size(690, 484);
+            this.logEventsTab.TabIndex = 0;
+            this.logEventsTab.Text = "Log Events";
+            this.logEventsTab.UseVisualStyleBackColor = true;
             // 
-            // label5
+            // logEventsDataGrid
             // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(314, 78);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(68, 17);
-            this.label5.TabIndex = 6;
-            this.label5.Text = "Drawing #";
+            this.logEventsDataGrid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logEventsDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.logEventsDataGrid.Location = new System.Drawing.Point(6, 6);
+            this.logEventsDataGrid.Name = "logEventsDataGrid";
+            this.logEventsDataGrid.Size = new System.Drawing.Size(1038, 536);
+            this.logEventsDataGrid.TabIndex = 0;
             // 
-            // drawingNoBox
+            // bomTab
             // 
-            this.drawingNoBox.FormattingEnabled = true;
-            this.drawingNoBox.Location = new System.Drawing.Point(388, 75);
-            this.drawingNoBox.Name = "drawingNoBox";
-            this.drawingNoBox.Size = new System.Drawing.Size(174, 25);
-            this.drawingNoBox.TabIndex = 7;
+            this.bomTab.Controls.Add(this.bomDataGrid);
+            this.bomTab.Location = new System.Drawing.Point(4, 30);
+            this.bomTab.Name = "bomTab";
+            this.bomTab.Padding = new System.Windows.Forms.Padding(3);
+            this.bomTab.Size = new System.Drawing.Size(690, 484);
+            this.bomTab.TabIndex = 1;
+            this.bomTab.Text = "Bill Of Materials";
+            this.bomTab.UseVisualStyleBackColor = true;
+            // 
+            // bomDataGrid
+            // 
+            this.bomDataGrid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.bomDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.bomDataGrid.Location = new System.Drawing.Point(6, 6);
+            this.bomDataGrid.Name = "bomDataGrid";
+            this.bomDataGrid.Size = new System.Drawing.Size(1038, 536);
+            this.bomDataGrid.TabIndex = 1;
+            // 
+            // cutTemplatesTab
+            // 
+            this.cutTemplatesTab.Controls.Add(this.cutTemplatesDataGrid);
+            this.cutTemplatesTab.Location = new System.Drawing.Point(4, 30);
+            this.cutTemplatesTab.Name = "cutTemplatesTab";
+            this.cutTemplatesTab.Padding = new System.Windows.Forms.Padding(3);
+            this.cutTemplatesTab.Size = new System.Drawing.Size(690, 484);
+            this.cutTemplatesTab.TabIndex = 3;
+            this.cutTemplatesTab.Text = "Cut Templates";
+            this.cutTemplatesTab.UseVisualStyleBackColor = true;
+            // 
+            // cutTemplatesDataGrid
+            // 
+            this.cutTemplatesDataGrid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.cutTemplatesDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.cutTemplatesDataGrid.Location = new System.Drawing.Point(6, 6);
+            this.cutTemplatesDataGrid.Name = "cutTemplatesDataGrid";
+            this.cutTemplatesDataGrid.Size = new System.Drawing.Size(678, 468);
+            this.cutTemplatesDataGrid.TabIndex = 2;
+            // 
+            // dwgDetailsTab
+            // 
+            this.dwgDetailsTab.Controls.Add(this.drawingPdfViewer);
+            this.dwgDetailsTab.Location = new System.Drawing.Point(4, 30);
+            this.dwgDetailsTab.Name = "dwgDetailsTab";
+            this.dwgDetailsTab.Padding = new System.Windows.Forms.Padding(3);
+            this.dwgDetailsTab.Size = new System.Drawing.Size(871, 560);
+            this.dwgDetailsTab.TabIndex = 2;
+            this.dwgDetailsTab.Text = "Drawing Details";
+            this.dwgDetailsTab.UseVisualStyleBackColor = true;
+            // 
+            // drawingPdfViewer
+            // 
+            this.drawingPdfViewer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.drawingPdfViewer.Enabled = true;
+            this.drawingPdfViewer.Location = new System.Drawing.Point(6, 6);
+            this.drawingPdfViewer.Name = "drawingPdfViewer";
+            this.drawingPdfViewer.OcxState = ((System.Windows.Forms.AxHost.State)(resources.GetObject("drawingPdfViewer.OcxState")));
+            this.drawingPdfViewer.Size = new System.Drawing.Size(859, 548);
+            this.drawingPdfViewer.TabIndex = 0;
             // 
             // MainForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.ClientSize = new System.Drawing.Size(942, 674);
-            this.Controls.Add(this.drawingNoBox);
-            this.Controls.Add(this.equipmentNoBox);
-            this.Controls.Add(this.label5);
+            this.ClientSize = new System.Drawing.Size(906, 656);
+            this.Controls.Add(this.mainTabControl);
             this.Controls.Add(this.viewFlipDeciderBox);
-            this.Controls.Add(this.label4);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.logTextBox);
-            this.Controls.Add(this.activeDocTitleBox);
             this.Controls.Add(this.runButton);
             this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
@@ -160,6 +202,15 @@
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "ExportDXF";
+            this.mainTabControl.ResumeLayout(false);
+            this.logEventsTab.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.logEventsDataGrid)).EndInit();
+            this.bomTab.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.bomDataGrid)).EndInit();
+            this.cutTemplatesTab.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.cutTemplatesDataGrid)).EndInit();
+            this.dwgDetailsTab.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.drawingPdfViewer)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -168,15 +219,17 @@
         #endregion
 
         private System.Windows.Forms.Button runButton;
-        private System.Windows.Forms.TextBox activeDocTitleBox;
-        private System.Windows.Forms.RichTextBox logTextBox;
-        private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox viewFlipDeciderBox;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.ComboBox equipmentNoBox;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.ComboBox drawingNoBox;
+        private System.Windows.Forms.TabControl mainTabControl;
+        private System.Windows.Forms.TabPage logEventsTab;
+        private System.Windows.Forms.TabPage bomTab;
+        private System.Windows.Forms.TabPage dwgDetailsTab;
+        private System.Windows.Forms.DataGridView logEventsDataGrid;
+        private AxAcroPDFLib.AxAcroPDF drawingPdfViewer;
+        private System.Windows.Forms.DataGridView bomDataGrid;
+        private System.Windows.Forms.TabPage cutTemplatesTab;
+        private System.Windows.Forms.DataGridView cutTemplatesDataGrid;
     }
 }
 
