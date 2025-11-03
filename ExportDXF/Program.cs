@@ -20,9 +20,20 @@ namespace ExportDXF
             // Simple DI setup - could use a DI container like Microsoft.Extensions.DependencyInjection
             var container = new ServiceContainer();
 
-            var mainForm = container.Resolve<MainForm>();
+            // Show drawing selection dialog first
+            var drawingSelectionForm = container.ResolveDrawingSelection();
+            var result = drawingSelectionForm.ShowDialog();
 
-            Application.Run(mainForm);
+            if (result == DialogResult.OK && drawingSelectionForm.SelectedDrawingId.HasValue)
+            {
+                // User selected a drawing, proceed to main form
+                var mainForm = container.Resolve<MainForm>(
+                    drawingSelectionForm.SelectedDrawingId.Value,
+                    drawingSelectionForm.SelectedDrawingNumber);
+
+                Application.Run(mainForm);
+            }
+            // If user cancelled, just exit
         }
     }
 
@@ -32,7 +43,21 @@ namespace ExportDXF
     /// </summary>
     public class ServiceContainer
     {
-        public MainForm Resolve<T>() where T : MainForm
+        private readonly string _baseUrl;
+        private readonly CutFabApiClient _apiClient;
+
+        public ServiceContainer()
+        {
+            _baseUrl = ConfigurationManager.AppSettings["CutFab.ApiBaseUrl"] ?? "http://localhost:7027";
+            _apiClient = new CutFabApiClient(_baseUrl);
+        }
+
+        public DrawingSelectionForm ResolveDrawingSelection()
+        {
+            return new DrawingSelectionForm(_apiClient);
+        }
+
+        public MainForm Resolve<T>(int selectedDrawingId, string selectedDrawingNumber) where T : MainForm
         {
             // Create the dependency tree
             var solidWorksService = new SolidWorksService();
@@ -40,17 +65,15 @@ namespace ExportDXF
             var bomExtractor = new BomExtractor();
             var partExporter = new PartExporter();
             var drawingExporter = new DrawingExporter();
-            var baseUrl = ConfigurationManager.AppSettings["CutFab.ApiBaseUrl"] ?? "http://localhost:7027";
-            var apiClient = new CutFabApiClient(baseUrl);
 
             var exportService = new DxfExportService(
                 solidWorksService,
                 bomExtractor,
                 partExporter,
                 drawingExporter,
-                apiClient);
+                _apiClient);
 
-            return new MainForm(solidWorksService, exportService, apiClient);
+            return new MainForm(solidWorksService, exportService, _apiClient, selectedDrawingId, selectedDrawingNumber);
         }
     }
 }
