@@ -104,7 +104,7 @@
             this.logEventsTab.Location = new System.Drawing.Point(4, 30);
             this.logEventsTab.Name = "logEventsTab";
             this.logEventsTab.Padding = new System.Windows.Forms.Padding(3);
-            this.logEventsTab.Size = new System.Drawing.Size(690, 484);
+            this.logEventsTab.Size = new System.Drawing.Size(871, 560);
             this.logEventsTab.TabIndex = 0;
             this.logEventsTab.Text = "Log Events";
             this.logEventsTab.UseVisualStyleBackColor = true;
@@ -117,7 +117,7 @@
             this.logEventsDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.logEventsDataGrid.Location = new System.Drawing.Point(6, 6);
             this.logEventsDataGrid.Name = "logEventsDataGrid";
-            this.logEventsDataGrid.Size = new System.Drawing.Size(1038, 536);
+            this.logEventsDataGrid.Size = new System.Drawing.Size(859, 548);
             this.logEventsDataGrid.TabIndex = 0;
             // 
             // bomTab
@@ -126,7 +126,7 @@
             this.bomTab.Location = new System.Drawing.Point(4, 30);
             this.bomTab.Name = "bomTab";
             this.bomTab.Padding = new System.Windows.Forms.Padding(3);
-            this.bomTab.Size = new System.Drawing.Size(690, 484);
+            this.bomTab.Size = new System.Drawing.Size(871, 560);
             this.bomTab.TabIndex = 1;
             this.bomTab.Text = "Bill Of Materials";
             this.bomTab.UseVisualStyleBackColor = true;
@@ -139,7 +139,7 @@
             this.bomDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.bomDataGrid.Location = new System.Drawing.Point(6, 6);
             this.bomDataGrid.Name = "bomDataGrid";
-            this.bomDataGrid.Size = new System.Drawing.Size(1038, 536);
+            this.bomDataGrid.Size = new System.Drawing.Size(859, 548);
             this.bomDataGrid.TabIndex = 1;
             // 
             // cutTemplatesTab
@@ -148,7 +148,7 @@
             this.cutTemplatesTab.Location = new System.Drawing.Point(4, 30);
             this.cutTemplatesTab.Name = "cutTemplatesTab";
             this.cutTemplatesTab.Padding = new System.Windows.Forms.Padding(3);
-            this.cutTemplatesTab.Size = new System.Drawing.Size(690, 484);
+            this.cutTemplatesTab.Size = new System.Drawing.Size(871, 560);
             this.cutTemplatesTab.TabIndex = 3;
             this.cutTemplatesTab.Text = "Cut Templates";
             this.cutTemplatesTab.UseVisualStyleBackColor = true;
@@ -161,7 +161,7 @@
             this.cutTemplatesDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.cutTemplatesDataGrid.Location = new System.Drawing.Point(6, 6);
             this.cutTemplatesDataGrid.Name = "cutTemplatesDataGrid";
-            this.cutTemplatesDataGrid.Size = new System.Drawing.Size(678, 468);
+            this.cutTemplatesDataGrid.Size = new System.Drawing.Size(859, 548);
             this.cutTemplatesDataGrid.TabIndex = 2;
             // 
             // dwgDetailsTab
