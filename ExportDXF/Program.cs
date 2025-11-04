@@ -2,6 +2,7 @@
 using ExportDXF.Services;
 using System;
 using System.Configuration;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ExportDXF
@@ -21,7 +22,7 @@ namespace ExportDXF
             var container = new ServiceContainer();
 
             // Show drawing selection dialog first
-            var drawingSelectionForm = container.ResolveDrawingSelection();
+            var drawingSelectionForm = container.ResolveDrawingSelectionAsync().GetAwaiter().GetResult();
             var result = drawingSelectionForm.ShowDialog();
 
             if (result == DialogResult.OK && drawingSelectionForm.SelectedDrawingId.HasValue)
@@ -52,9 +53,24 @@ namespace ExportDXF
             _apiClient = new CutFabApiClient(_baseUrl);
         }
 
-        public DrawingSelectionForm ResolveDrawingSelection()
+        public async Task<DrawingSelectionForm> ResolveDrawingSelectionAsync()
         {
-            return new DrawingSelectionForm(_apiClient);
+            // Connect to SolidWorks first
+            var solidWorksService = new SolidWorksService();
+            try
+            {
+                await solidWorksService.ConnectAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Warning: Could not connect to SolidWorks: {ex.Message}\n\nYou can still select a drawing, but the active document will not be displayed.",
+                    "SolidWorks Connection Warning",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Warning);
+            }
+
+            return new DrawingSelectionForm(_apiClient, solidWorksService);
         }
 
         public MainForm Resolve<T>(int selectedDrawingId, string selectedDrawingNumber) where T : MainForm
