@@ -10,20 +10,52 @@ namespace ExportDXF.Forms
     public partial class DrawingSelectionForm : Form
     {
         private readonly ICutFabApiClient _apiClient;
+        private readonly ISolidWorksService _solidWorksService;
 
         public int? SelectedDrawingId { get; private set; }
         public string SelectedDrawingNumber { get; private set; }
 
-        public DrawingSelectionForm(ICutFabApiClient apiClient)
+        public DrawingSelectionForm(ICutFabApiClient apiClient, ISolidWorksService solidWorksService)
         {
             _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+            _solidWorksService = solidWorksService ?? throw new ArgumentNullException(nameof(solidWorksService));
+            _solidWorksService.ActiveDocumentChanged += (s, e) => DisplayActiveDrawing();
             InitializeComponent();
         }
 
         protected override async void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            DisplayActiveDrawing();
             await LoadEquipmentAsync();
+        }
+
+        private void DisplayActiveDrawing()
+        {
+            try
+            {
+                var activeDoc = _solidWorksService.GetActiveDocument();
+                if (activeDoc != null && activeDoc.DocumentType == Models.DocumentType.Drawing)
+                {
+                    currentDrawingLabel.Text = $"Active Drawing: {activeDoc.Title}";
+                    currentDrawingLabel.ForeColor = Color.Green;
+                }
+                else if (activeDoc != null)
+                {
+                    currentDrawingLabel.Text = $"Active Document: {activeDoc.Title} (Not a Drawing)";
+                    currentDrawingLabel.ForeColor = Color.Orange;
+                }
+                else
+                {
+                    currentDrawingLabel.Text = "No active SolidWorks document";
+                    currentDrawingLabel.ForeColor = Color.Gray;
+                }
+            }
+            catch (Exception ex)
+            {
+                currentDrawingLabel.Text = $"Error getting active document: {ex.Message}";
+                currentDrawingLabel.ForeColor = Color.Red;
+            }
         }
 
         private async Task LoadEquipmentAsync()
