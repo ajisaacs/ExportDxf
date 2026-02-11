@@ -3,10 +3,69 @@ using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 
 namespace ExportDXF.Services
 {
+    /// <summary>
+    /// Helper class to get COM objects from Running Object Table (ROT) in .NET Core/5+
+    /// </summary>
+    internal static class ComHelper
+    {
+        [DllImport("ole32.dll")]
+        private static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable rot);
+
+        [DllImport("ole32.dll")]
+        private static extern int CreateBindCtx(int reserved, out IBindCtx bindCtx);
+
+        public static object GetActiveObject(string progId)
+        {
+            IRunningObjectTable rot = null;
+            IEnumMoniker enumMoniker = null;
+            IBindCtx bindCtx = null;
+
+            try
+            {
+                if (GetRunningObjectTable(0, out rot) != 0 || rot == null)
+                    return null;
+
+                rot.EnumRunning(out enumMoniker);
+                if (enumMoniker == null)
+                    return null;
+
+                if (CreateBindCtx(0, out bindCtx) != 0 || bindCtx == null)
+                    return null;
+
+                IMoniker[] monikers = new IMoniker[1];
+                IntPtr fetched = IntPtr.Zero;
+
+                while (enumMoniker.Next(1, monikers, fetched) == 0)
+                {
+                    monikers[0].GetDisplayName(bindCtx, null, out string displayName);
+
+                    if (displayName != null && displayName.IndexOf(progId, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        rot.GetObject(monikers[0], out object obj);
+                        return obj;
+                    }
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                if (enumMoniker != null) Marshal.ReleaseComObject(enumMoniker);
+                if (rot != null) Marshal.ReleaseComObject(rot);
+                if (bindCtx != null) Marshal.ReleaseComObject(bindCtx);
+            }
+        }
+    }
+
     /// <summary>
     /// Service for managing SolidWorks application connection and document lifecycle.
     /// </summary>
@@ -245,7 +304,7 @@ namespace ExportDXF.Services
         {
             try
             {
-                return Marshal.GetActiveObject("SldWorks.Application") as SldWorks;
+                return ComHelper.GetActiveObject("SldWorks.Application") as SldWorks;
             }
             catch (COMException)
             {
