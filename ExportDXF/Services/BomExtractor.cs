@@ -1,9 +1,9 @@
 ﻿using ExportDXF.Extensions;
 using ExportDXF.ItemExtractors;
+using ExportDXF.Models;
 using SolidWorks.Interop.sldworks;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 
 namespace ExportDXF.Services
 {
@@ -16,14 +16,14 @@ namespace ExportDXF.Services
         /// Extracts items from all BOM tables in a drawing document.
         /// </summary>
         /// <param name="drawing">The drawing document containing BOM tables.</param>
-        /// <param name="progressCallback">Optional callback for progress updates.</param>
+        /// <param name="progressCallback">Optional callback for progress updates (message, level, file).</param>
         /// <returns>A list of extracted items.</returns>
-        List<Item> ExtractFromDrawing(DrawingDoc drawing, Action<string, Color?> progressCallback);
+        List<Item> ExtractFromDrawing(DrawingDoc drawing, Action<string, LogLevel, string> progressCallback);
     }
 
     public class BomExtractor : IBomExtractor
     {
-        public List<Item> ExtractFromDrawing(DrawingDoc drawing, Action<string, Color?> progressCallback)
+        public List<Item> ExtractFromDrawing(DrawingDoc drawing, Action<string, LogLevel, string> progressCallback)
         {
             if (drawing == null)
                 throw new ArgumentNullException(nameof(drawing));
@@ -32,11 +32,11 @@ namespace ExportDXF.Services
 
             if (bomTables.Count == 0)
             {
-                progressCallback?.Invoke("Error: Bill of materials not found.", Color.Red);
+                progressCallback?.Invoke("Error: Bill of materials not found.", LogLevel.Error, null);
                 return new List<Item>();
             }
 
-            progressCallback?.Invoke($"Found {bomTables.Count} BOM table(s)", null);
+            progressCallback?.Invoke($"Found {bomTables.Count} BOM table(s)", LogLevel.Info, null);
 
             var allItems = new List<Item>();
 
@@ -49,14 +49,14 @@ namespace ExportDXF.Services
                         SkipHiddenRows = true
                     };
 
-                    progressCallback?.Invoke($"Fetching components from {bom.BomFeature.Name}", null);
+                    progressCallback?.Invoke($"Fetching components from {bom.BomFeature.Name}", LogLevel.Info, null);
 
                     var items = extractor.GetItems();
                     allItems.AddRange(items);
                 }
                 catch (Exception ex)
                 {
-                    progressCallback?.Invoke($"Failed to extract from {bom.BomFeature.Name}: {ex.Message}", Color.Red);
+                    progressCallback?.Invoke($"Failed to extract: {ex.Message}", LogLevel.Error, bom.BomFeature.Name);
                 }
             }
 

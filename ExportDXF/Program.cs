@@ -1,8 +1,7 @@
-﻿using ExportDXF.Forms;
+using ExportDXF.Forms;
 using ExportDXF.Services;
 using System;
 using System.Configuration;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ExportDXF
@@ -18,78 +17,40 @@ namespace ExportDXF
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Simple DI setup - could use a DI container like Microsoft.Extensions.DependencyInjection
             var container = new ServiceContainer();
-
-            // Show drawing selection dialog first
-            var drawingSelectionForm = container.ResolveDrawingSelectionAsync().GetAwaiter().GetResult();
-            var result = drawingSelectionForm.ShowDialog();
-
-            if (result == DialogResult.OK && drawingSelectionForm.SelectedDrawingId.HasValue)
-            {
-                // User selected a drawing, proceed to main form
-                var mainForm = container.Resolve<MainForm>(
-                    drawingSelectionForm.SelectedDrawingId.Value,
-                    drawingSelectionForm.SelectedDrawingNumber);
-
-                Application.Run(mainForm);
-            }
-            // If user cancelled, just exit
+            var mainForm = container.ResolveMainForm();
+            Application.Run(mainForm);
         }
     }
 
     /// <summary>
     /// Simple dependency injection container.
-    /// For production, consider using Microsoft.Extensions.DependencyInjection or similar.
     /// </summary>
     public class ServiceContainer
     {
-        private readonly string _baseUrl;
-        private readonly CutFabApiClient _apiClient;
+        private readonly string _outputFolder;
 
         public ServiceContainer()
         {
-            _baseUrl = ConfigurationManager.AppSettings["CutFab.ApiBaseUrl"] ?? "http://localhost:7027";
-            _apiClient = new CutFabApiClient(_baseUrl);
+            _outputFolder = ConfigurationManager.AppSettings["ExportOutputFolder"] ?? @"C:\ExportDXF\Output";
         }
 
-        public async Task<DrawingSelectionForm> ResolveDrawingSelectionAsync()
+        public MainForm ResolveMainForm()
         {
-            // Connect to SolidWorks first
             var solidWorksService = new SolidWorksService();
-            try
-            {
-                await solidWorksService.ConnectAsync();
-            }
-            catch (Exception ex)
-            {
-                System.Windows.Forms.MessageBox.Show(
-                    $"Warning: Could not connect to SolidWorks: {ex.Message}\n\nYou can still select a drawing, but the active document will not be displayed.",
-                    "SolidWorks Connection Warning",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Warning);
-            }
-
-            return new DrawingSelectionForm(_apiClient, solidWorksService);
-        }
-
-        public MainForm Resolve<T>(int selectedDrawingId, string selectedDrawingNumber) where T : MainForm
-        {
-            // Create the dependency tree
-            var solidWorksService = new SolidWorksService();
-
             var bomExtractor = new BomExtractor();
             var partExporter = new PartExporter();
             var drawingExporter = new DrawingExporter();
+            var fileExportService = new FileExportService(_outputFolder);
 
             var exportService = new DxfExportService(
                 solidWorksService,
                 bomExtractor,
                 partExporter,
                 drawingExporter,
-                _apiClient);
+                fileExportService);
 
-            return new MainForm(solidWorksService, exportService, _apiClient, selectedDrawingId, selectedDrawingNumber);
+            return new MainForm(solidWorksService, exportService, fileExportService);
         }
     }
 }

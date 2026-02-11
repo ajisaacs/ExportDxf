@@ -14,14 +14,29 @@ namespace ExportDXF.Models
         public string PartName { get; set; } = "";
         public string ConfigurationName { get; set; } = "";
         public string Material { get; set; } = "";
-        public int DrawingID { get; set; }
-        public int? CutTemplateID { get; set; }
         public string CutTemplateName { get; set; } = "";
+        public string DxfFilePath { get; set; } = "";
 
-        // Sheet metal properties from CutTemplate
-        public double? Thickness { get; set; }
+        // Sheet metal properties
+        private double? _thickness;
+        public double? Thickness
+        {
+            get => _thickness;
+            set => _thickness = value.HasValue ? Math.Round(value.Value, 8) : null;
+        }
+
         public double? KFactor { get; set; }
-        public double? DefaultBendRadius { get; set; }
+
+        private double? _defaultBendRadius;
+        public double? DefaultBendRadius
+        {
+            get => _defaultBendRadius;
+            set => _defaultBendRadius = value.HasValue ? Math.Round(value.Value, 8) : null;
+        }
+
+        // EF Core relationship to ExportRecord
+        public int ExportRecordId { get; set; }
+        public virtual ExportRecord ExportRecord { get; set; }
     }
 
     public struct Size

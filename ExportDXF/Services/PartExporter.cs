@@ -1,9 +1,9 @@
 ﻿using ExportDXF.Extensions;
+using ExportDXF.Models;
 using ExportDXF.Utilities;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
-using System.Drawing;
 using System.IO;
 
 namespace ExportDXF.Services
@@ -75,7 +75,7 @@ namespace ExportDXF.Services
 
             if (item?.Component == null)
             {
-                context.ProgressCallback?.Invoke($"Item {item?.ItemNo} - skipped, no component", Color.Yellow);
+                context.ProgressCallback?.Invoke("Skipped, no component", LogLevel.Warning, $"Item {item?.ItemNo}");
                 return;
             }
 
@@ -88,7 +88,7 @@ namespace ExportDXF.Services
 
             if (part == null)
             {
-                context.ProgressCallback?.Invoke($"{item.ItemNo} - skipped, not a part document", null);
+                context.ProgressCallback?.Invoke("Skipped, not a part document", LogLevel.Info, item.PartName);
                 return;
             }
 
@@ -150,9 +150,11 @@ namespace ExportDXF.Services
             {
                 var model = part as ModelDoc2;
 
+                var partTitle = model.GetTitle();
+
                 if (!model.IsSheetMetal())
                 {
-                    context.ProgressCallback?.Invoke($"{model.GetTitle()} - skipped, not sheet metal", null);
+                    context.ProgressCallback?.Invoke("Skipped, not sheet metal", LogLevel.Info, partTitle);
                     return false;
                 }
 
@@ -164,13 +166,13 @@ namespace ExportDXF.Services
                 var modelName = Path.GetFileNameWithoutExtension(model.GetPathName());
                 sheet.SetName(modelName);
 
-                context.ProgressCallback?.Invoke($"{model.GetTitle()} - Creating flat pattern", null);
+                context.ProgressCallback?.Invoke("Creating flat pattern", LogLevel.Info, partTitle);
 
                 var view = CreateFlatPatternView(templateDrawing, model, configName);
 
                 if (view == null)
                 {
-                    context.ProgressCallback?.Invoke($"{model.GetTitle()} - Failed to create flat pattern", Color.Red);
+                    context.ProgressCallback?.Invoke("Failed to create flat pattern", LogLevel.Error, partTitle);
                     return false;
                 }
 
@@ -178,7 +180,7 @@ namespace ExportDXF.Services
 
                 if (context.ViewFlipDecider?.ShouldFlip(view) == true)
                 {
-                    context.ProgressCallback?.Invoke($"{model.GetTitle()} - Flipped view", Color.Blue);
+                    context.ProgressCallback?.Invoke("Flipped view", LogLevel.Info, partTitle);
                     view.FlipView = true;
                 }
 
@@ -187,7 +189,7 @@ namespace ExportDXF.Services
 
                 AddEtchLines(savePath);
 
-                context.ProgressCallback?.Invoke($"{model.GetTitle()} - Saved to \"{savePath}\"", Color.Green);
+                context.ProgressCallback?.Invoke($"Saved to \"{savePath}\"", LogLevel.Info, partTitle);
 
                 DeleteView(drawingModel, view);
 
@@ -195,7 +197,7 @@ namespace ExportDXF.Services
             }
             catch (Exception ex)
             {
-                context.ProgressCallback?.Invoke($"Export failed: {ex.Message}", Color.Red);
+                context.ProgressCallback?.Invoke($"Export failed: {ex.Message}", LogLevel.Error, null);
                 return false;
             }
         }
@@ -232,7 +234,8 @@ namespace ExportDXF.Services
 
             if (ViewHelper.HasSupressedBends(view))
             {
-                context.ProgressCallback?.Invoke("A bend is suppressed, please check flat pattern", Color.Red);
+                var title = partModel.GetTitle();
+                context.ProgressCallback?.Invoke("A bend is suppressed, please check flat pattern", LogLevel.Error, title);
             }
 
             if (ViewHelper.HideModelSketches(view))
@@ -297,14 +300,16 @@ namespace ExportDXF.Services
             if (desc.Contains("laser"))
             {
                 context.ProgressCallback?.Invoke(
-                    $"Failed to export item #{item.ItemNo} but description says it is laser cut.",
-                    Color.Red);
+                    "Export failed but description says it is laser cut",
+                    LogLevel.Error,
+                    item.PartName);
             }
             else if (desc.Contains("plasma"))
             {
                 context.ProgressCallback?.Invoke(
-                    $"Failed to export item #{item.ItemNo} but description says it is plasma cut.",
-                    Color.Red);
+                    "Export failed but description says it is plasma cut",
+                    LogLevel.Error,
+                    item.PartName);
             }
         }
     }

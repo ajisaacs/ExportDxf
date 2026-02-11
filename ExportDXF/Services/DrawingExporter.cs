@@ -1,7 +1,7 @@
-﻿using SolidWorks.Interop.sldworks;
+﻿using ExportDXF.Models;
+using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
-using System.Drawing;
 using System.IO;
 
 namespace ExportDXF.Services
@@ -57,7 +57,7 @@ namespace ExportDXF.Services
                     (int)swExportDataSheetsToExport_e.swExportData_ExportAllSheets,
                     drawing);
 
-                context.ProgressCallback?.Invoke($"Exporting drawing to PDF: \"{pdfFileName}\"", null);
+                context.ProgressCallback?.Invoke("Exporting drawing to PDF", LogLevel.Info, pdfFileName);
 
                 int errors = 0;
                 int warnings = 0;
@@ -73,26 +73,26 @@ namespace ExportDXF.Services
 
                 if (success && errors == 0)
                 {
-                    context.ProgressCallback?.Invoke($"Saved drawing to PDF: \"{pdfFileName}\"", Color.Green);
+                    context.ProgressCallback?.Invoke("Saved drawing to PDF", LogLevel.Info, pdfFileName);
                 }
                 else if (success && warnings > 0)
                 {
                     context.ProgressCallback?.Invoke(
                         $"PDF export completed with warnings: {warnings}",
-                        Color.DarkBlue);
+                        LogLevel.Warning, pdfFileName);
                 }
                 else
                 {
                     context.ProgressCallback?.Invoke(
                         $"PDF export failed. Errors: {errors}, Warnings: {warnings}",
-                        Color.Red);
+                        LogLevel.Error, pdfFileName);
                     throw new InvalidOperationException($"PDF export failed with {errors} errors and {warnings} warnings.");
                 }
             }
             catch (Exception ex)
             {
                 var errorMessage = $"Failed to export PDF: {ex.Message}";
-                context.ProgressCallback?.Invoke(errorMessage, Color.Red);
+                context.ProgressCallback?.Invoke(errorMessage, LogLevel.Error, null);
                 throw new InvalidOperationException(errorMessage, ex);
             }
         }

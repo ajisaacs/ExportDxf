@@ -1,8 +1,8 @@
-﻿using ExportDXF.ViewFlipDeciders;
+﻿using ExportDXF.Models;
+using ExportDXF.ViewFlipDeciders;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
-using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
@@ -44,12 +44,18 @@ namespace ExportDXF.Services
 
         /// <summary>
         /// Callback for reporting progress and status messages.
+        /// Parameters: message, level, file (optional)
         /// </summary>
-        public Action<string, Color?> ProgressCallback { get; set; }
+        public Action<string, LogLevel, string> ProgressCallback { get; set; }
 
-        public void LogProgress(string message, Color? color = null)
+        /// <summary>
+        /// Callback for adding BOM items to the UI.
+        /// </summary>
+        public Action<BomItem> BomItemCallback { get; set; }
+
+        public void LogProgress(string message, LogLevel level = LogLevel.Info, string file = null)
         {
-            ProgressCallback?.Invoke(message, color);
+            ProgressCallback?.Invoke(message, level, file);
         }
 
         public SldWorks SolidWorksApp { get; set; }
@@ -90,7 +96,7 @@ namespace ExportDXF.Services
 
                 if (SolidWorksApp == null)
                 {
-                    ProgressCallback?.Invoke("Warning: Cannot cleanup template drawing - SolidWorks app not available", Color.DarkBlue);
+                    ProgressCallback?.Invoke("Warning: Cannot cleanup template drawing - SolidWorks app not available", LogLevel.Warning, null);
                     TemplateDrawing = null;
                     return;
                 }
@@ -104,7 +110,7 @@ namespace ExportDXF.Services
                     {
                         // Close the document without saving
                         SolidWorksApp.CloseDoc(title);
-                        ProgressCallback?.Invoke("Closed template drawing", null);
+                        ProgressCallback?.Invoke("Closed template drawing", LogLevel.Info, null);
                     }
                 }
 
@@ -113,7 +119,7 @@ namespace ExportDXF.Services
             }
             catch (Exception ex)
             {
-                ProgressCallback?.Invoke($"Failed to close template drawing: {ex.Message}", Color.Red);
+                ProgressCallback?.Invoke($"Failed to close template drawing: {ex.Message}", LogLevel.Error, null);
 
                 // Still clear the reference to prevent further issues
                 TemplateDrawing = null;
