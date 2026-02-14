@@ -341,6 +341,8 @@ namespace ExportDXF.Forms
                 LogMessage($"Started at {DateTime.Now:t}");
                 LogMessage($"Exporting to: {_fileExportService.OutputFolder}");
 
+                _solidWorksService.SetCommandInProgress(true);
+
                 await Task.Run(() => _exportService.Export(exportContext), token);
 
                 LogMessage("Done.");
@@ -356,6 +358,7 @@ namespace ExportDXF.Forms
             }
             finally
             {
+                _solidWorksService.SetCommandInProgress(false);
                 UpdateUIForExportComplete();
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;

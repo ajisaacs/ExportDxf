@@ -89,6 +89,13 @@ namespace ExportDXF.Services
         void EnableUserControl(bool enable);
 
         /// <summary>
+        /// Sets whether a command is in progress. When true, user input to
+        /// SolidWorks is disabled and interactive dialogs are suppressed.
+        /// </summary>
+        /// <param name="inProgress">True to block user input, false to re-enable.</param>
+        void SetCommandInProgress(bool inProgress);
+
+        /// <summary>
         /// Gets the SolidWorks application instance.
         /// </summary>
         /// <returns>The SldWorks instance.</returns>
@@ -185,6 +192,15 @@ namespace ExportDXF.Services
             if (_sldWorks != null)
             {
                 _sldWorks.UserControl = enable;
+            }
+        }
+
+        /// <inheritdoc />
+        public void SetCommandInProgress(bool inProgress)
+        {
+            if (_sldWorks != null)
+            {
+                _sldWorks.CommandInProgress = inProgress;
             }
         }
 
