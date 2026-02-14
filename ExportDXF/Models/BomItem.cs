@@ -1,5 +1,3 @@
-using System;
-
 namespace ExportDXF.Models
 {
     public class BomItem
@@ -14,29 +12,13 @@ namespace ExportDXF.Models
         public string PartName { get; set; } = "";
         public string ConfigurationName { get; set; } = "";
         public string Material { get; set; } = "";
-        public string CutTemplateName { get; set; } = "";
-        public string DxfFilePath { get; set; } = "";
-
-        // Sheet metal properties
-        private double? _thickness;
-        public double? Thickness
-        {
-            get => _thickness;
-            set => _thickness = value.HasValue ? Math.Round(value.Value, 8) : null;
-        }
-
-        public double? KFactor { get; set; }
-
-        private double? _defaultBendRadius;
-        public double? DefaultBendRadius
-        {
-            get => _defaultBendRadius;
-            set => _defaultBendRadius = value.HasValue ? Math.Round(value.Value, 8) : null;
-        }
 
         // EF Core relationship to ExportRecord
         public int ExportRecordId { get; set; }
         public virtual ExportRecord ExportRecord { get; set; }
+
+        // Optional 1:1 relationship to CutTemplate (only for sheet metal parts)
+        public virtual CutTemplate CutTemplate { get; set; }
     }
 
     public struct Size

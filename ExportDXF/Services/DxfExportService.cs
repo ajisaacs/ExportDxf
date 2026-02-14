@@ -2,11 +2,14 @@ using ExportDXF.Data;
 using ExportDXF.Extensions;
 using ExportDXF.ItemExtractors;
 using ExportDXF.Models;
+using ExportDXF.Utilities;
 using ExportDXF;
+using Microsoft.EntityFrameworkCore;
 using SolidWorks.Interop.sldworks;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ExportDXF.Services
 {
@@ -161,18 +164,29 @@ namespace ExportDXF.Services
             // Determine drawing number for file naming
             var drawingNumber = ParseDrawingNumber(context);
 
+            // Resolve output folder: /{outputDir}/{equipmentNo}/{drawingNo}/ or flat fallback
+            var drawingOutputFolder = _fileExportService.GetDrawingOutputFolder(drawingNumber);
+
             // Export drawing to PDF
             var tempDir = CreateTempWorkDir();
             _drawingExporter.ExportToPdf(drawing, tempDir, context);
 
-            // Copy PDF to output folder
+            // Copy PDF to output folder with versioning
+            string pdfStashPath = null;
+            string savedPdfPath = null;
             try
             {
                 var pdfs = Directory.GetFiles(tempDir, "*.pdf");
                 if (pdfs.Length > 0)
                 {
-                    var savedPath = _fileExportService.SavePdfFile(pdfs[0], drawingNumber);
-                    LogProgress(context, $"Saved PDF: {Path.GetFileName(savedPath)}", LogLevel.Info);
+                    // Determine the destination path to stash the existing file
+                    var pdfFileName = !string.IsNullOrEmpty(drawingNumber)
+                        ? $"{drawingNumber}.pdf"
+                        : Path.GetFileName(pdfs[0]);
+                    var pdfDestPath = Path.Combine(drawingOutputFolder, pdfFileName);
+
+                    pdfStashPath = _fileExportService.StashFile(pdfDestPath);
+                    savedPdfPath = _fileExportService.SavePdfFile(pdfs[0], drawingNumber, drawingOutputFolder);
                 }
             }
             catch (Exception ex)
@@ -186,15 +200,40 @@ namespace ExportDXF.Services
             {
                 using (var db = _dbContextFactory())
                 {
-                    db.Database.EnsureCreated();
+                    db.Database.Migrate();
                     exportRecord = new ExportRecord
                     {
                         DrawingNumber = drawingNumber ?? context.ActiveDocument.Title,
                         SourceFilePath = context.ActiveDocument.FilePath,
-                        OutputFolder = _fileExportService.OutputFolder,
+                        OutputFolder = drawingOutputFolder,
                         ExportedAt = DateTime.Now,
                         ExportedBy = System.Environment.UserName
                     };
+
+                    // Handle PDF versioning - compute hash and compare with previous
+                    if (savedPdfPath != null)
+                    {
+                        HandlePdfVersioning(savedPdfPath, exportRecord.DrawingNumber, exportRecord, context);
+
+                        // Archive or discard old PDF based on hash comparison
+                        if (pdfStashPath != null)
+                        {
+                            var previousRecord = db.ExportRecords
+                                .Where(r => r.DrawingNumber == exportRecord.DrawingNumber && r.PdfContentHash != null)
+                                .OrderByDescending(r => r.Id)
+                                .FirstOrDefault();
+
+                            if (previousRecord != null && previousRecord.PdfContentHash == exportRecord.PdfContentHash)
+                            {
+                                _fileExportService.DiscardStash(pdfStashPath);
+                            }
+                            else
+                            {
+                                _fileExportService.ArchiveFile(pdfStashPath, savedPdfPath);
+                            }
+                        }
+                    }
+
                     db.ExportRecords.Add(exportRecord);
                     db.SaveChanges();
                     LogProgress(context, $"Created export record (ID: {exportRecord.Id})", LogLevel.Info);
@@ -202,11 +241,13 @@ namespace ExportDXF.Services
             }
             catch (Exception ex)
             {
+                // Clean up stash on error
+                _fileExportService.DiscardStash(pdfStashPath);
                 LogProgress(context, $"Database error creating export record: {ex.Message}", LogLevel.Error);
             }
 
-            // Export parts to DXF (directly to output folder) and save BOM items
-            ExportItems(items, _fileExportService.OutputFolder, context, exportRecord?.Id);
+            // Export parts to DXF and save BOM items
+            ExportItems(items, drawingOutputFolder, context, exportRecord?.Id);
         }
 
         #endregion
@@ -268,6 +309,7 @@ namespace ExportDXF.Services
         private void ExportItems(List<Item> items, string saveDirectory, ExportContext context, int? exportRecordId = null)
         {
             int successCount = 0;
+            int skippedCount = 0;
             int failureCount = 0;
             int sortOrder = 0;
 
@@ -284,54 +326,62 @@ namespace ExportDXF.Services
                     // PartExporter will handle template drawing creation through context
                     _partExporter.ExportItem(item, saveDirectory, context);
 
+                    // Always create BomItem for every item (sheet metal or not)
+                    var bomItem = new BomItem
+                    {
+                        ExportRecordId = exportRecordId ?? 0,
+                        ItemNo = item.ItemNo ?? "",
+                        PartNo = item.FileName ?? item.PartName ?? "",
+                        SortOrder = sortOrder++,
+                        Qty = item.Quantity,
+                        TotalQty = item.Quantity,
+                        Description = item.Description ?? "",
+                        PartName = item.PartName ?? "",
+                        ConfigurationName = item.Configuration ?? "",
+                        Material = item.Material ?? ""
+                    };
+
+                    // Only create CutTemplate if DXF was exported successfully
                     if (!string.IsNullOrEmpty(item.FileName))
                     {
                         successCount++;
-                        LogProgress(context, $"Exported: {item.FileName}.dxf", LogLevel.Info);
 
-                        // Create BOM item
                         var dxfPath = Path.Combine(saveDirectory, item.FileName + ".dxf");
-                        var bomItem = new BomItem
+                        bomItem.CutTemplate = new CutTemplate
                         {
-                            ExportRecordId = exportRecordId ?? 0,
-                            ItemNo = item.ItemNo ?? "",
-                            PartNo = item.FileName ?? item.PartName ?? "",
-                            SortOrder = sortOrder++,
-                            Qty = item.Quantity,
-                            TotalQty = item.Quantity,
-                            Description = item.Description ?? "",
-                            PartName = item.PartName ?? "",
-                            ConfigurationName = item.Configuration ?? "",
-                            Material = item.Material ?? "",
+                            DxfFilePath = dxfPath,
+                            ContentHash = item.ContentHash,
                             Thickness = item.Thickness > 0 ? item.Thickness : null,
                             KFactor = item.KFactor > 0 ? item.KFactor : null,
-                            DefaultBendRadius = item.BendRadius > 0 ? item.BendRadius : null,
-                            DxfFilePath = dxfPath
+                            DefaultBendRadius = item.BendRadius > 0 ? item.BendRadius : null
                         };
 
-                        // Add to UI
-                        context.BomItemCallback?.Invoke(bomItem);
-
-                        // Save BOM item to database if we have an export record
-                        if (exportRecordId.HasValue)
-                        {
-                            try
-                            {
-                                using (var db = _dbContextFactory())
-                                {
-                                    db.BomItems.Add(bomItem);
-                                    db.SaveChanges();
-                                }
-                            }
-                            catch (Exception dbEx)
-                            {
-                                LogProgress(context, $"Database error saving BOM item: {dbEx.Message}", LogLevel.Error);
-                            }
-                        }
+                        // Compare hash with previous export to decide archive/discard
+                        HandleDxfVersioning(item, dxfPath, context);
                     }
                     else
                     {
-                        failureCount++;
+                        skippedCount++;
+                    }
+
+                    // Add to UI
+                    context.BomItemCallback?.Invoke(bomItem);
+
+                    // Save BOM item to database if we have an export record
+                    if (exportRecordId.HasValue)
+                    {
+                        try
+                        {
+                            using (var db = _dbContextFactory())
+                            {
+                                db.BomItems.Add(bomItem);
+                                db.SaveChanges();
+                            }
+                        }
+                        catch (Exception dbEx)
+                        {
+                            LogProgress(context, $"Database error saving BOM item: {dbEx.Message}", LogLevel.Error);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -341,12 +391,93 @@ namespace ExportDXF.Services
                 }
             }
 
-            LogProgress(context, $"Export complete: {successCount} succeeded, {failureCount} failed",
-                failureCount > 0 ? LogLevel.Warning : LogLevel.Info);
+            var summary = $"Export complete: {successCount} exported, {skippedCount} skipped";
+            if (failureCount > 0)
+                summary += $", {failureCount} failed";
+            LogProgress(context, summary, failureCount > 0 ? LogLevel.Warning : LogLevel.Info);
 
             if (exportRecordId.HasValue)
             {
                 LogProgress(context, $"BOM items saved to database (ExportRecord ID: {exportRecordId.Value})", LogLevel.Info);
+            }
+        }
+
+        #endregion
+
+        #region Versioning
+
+        private void HandleDxfVersioning(Item item, string dxfPath, ExportContext context)
+        {
+            if (string.IsNullOrEmpty(item.ContentHash))
+                return;
+
+            try
+            {
+                using (var db = _dbContextFactory())
+                {
+                    var previousCutTemplate = db.CutTemplates
+                        .Where(ct => ct.DxfFilePath == dxfPath && ct.ContentHash != null)
+                        .OrderByDescending(ct => ct.Id)
+                        .FirstOrDefault();
+
+                    if (previousCutTemplate != null && previousCutTemplate.ContentHash == item.ContentHash)
+                    {
+                        // Content unchanged - discard the stashed file
+                        _fileExportService.DiscardStash(item.StashedFilePath);
+                        LogProgress(context, $"DXF unchanged: {item.FileName}.dxf", LogLevel.Info);
+                    }
+                    else
+                    {
+                        // Content changed or first export - archive the old file
+                        if (!string.IsNullOrEmpty(item.StashedFilePath))
+                        {
+                            _fileExportService.ArchiveFile(item.StashedFilePath, dxfPath);
+                            LogProgress(context, $"DXF updated, previous version archived: {item.FileName}.dxf", LogLevel.Info);
+                        }
+                        else
+                        {
+                            LogProgress(context, $"Exported: {item.FileName}.dxf", LogLevel.Info);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Don't fail the export if versioning fails - just discard the stash
+                _fileExportService.DiscardStash(item.StashedFilePath);
+                LogProgress(context, $"Versioning check failed for {item.FileName}: {ex.Message}", LogLevel.Warning);
+            }
+        }
+
+        private void HandlePdfVersioning(string pdfPath, string drawingNumber, ExportRecord exportRecord, ExportContext context)
+        {
+            try
+            {
+                var newHash = ContentHasher.ComputeFileHash(pdfPath);
+
+                using (var db = _dbContextFactory())
+                {
+                    var previousRecord = db.ExportRecords
+                        .Where(r => r.DrawingNumber == drawingNumber && r.PdfContentHash != null)
+                        .OrderByDescending(r => r.Id)
+                        .FirstOrDefault();
+
+                    if (previousRecord != null && previousRecord.PdfContentHash == newHash)
+                    {
+                        LogProgress(context, $"PDF unchanged: {Path.GetFileName(pdfPath)}", LogLevel.Info);
+                    }
+                    else
+                    {
+                        LogProgress(context, $"Saved PDF: {Path.GetFileName(pdfPath)}", LogLevel.Info);
+                    }
+                }
+
+                if (exportRecord != null)
+                    exportRecord.PdfContentHash = newHash;
+            }
+            catch (Exception ex)
+            {
+                LogProgress(context, $"PDF versioning check failed: {ex.Message}", LogLevel.Warning);
             }
         }
 

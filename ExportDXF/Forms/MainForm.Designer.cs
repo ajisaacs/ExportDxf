@@ -36,6 +36,8 @@ namespace ExportDXF.Forms
             logEventsDataGrid = new System.Windows.Forms.DataGridView();
             bomTab = new System.Windows.Forms.TabPage();
             bomDataGrid = new System.Windows.Forms.DataGridView();
+            cutTemplatesTab = new System.Windows.Forms.TabPage();
+            cutTemplatesDataGrid = new System.Windows.Forms.DataGridView();
             equipmentBox = new System.Windows.Forms.ComboBox();
             label1 = new System.Windows.Forms.Label();
             label2 = new System.Windows.Forms.Label();
@@ -45,12 +47,14 @@ namespace ExportDXF.Forms
             ((System.ComponentModel.ISupportInitialize)logEventsDataGrid).BeginInit();
             bomTab.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)bomDataGrid).BeginInit();
+            cutTemplatesTab.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)cutTemplatesDataGrid).BeginInit();
             SuspendLayout();
             // 
             // runButton
             // 
             runButton.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
-            runButton.Location = new System.Drawing.Point(656, 13);
+            runButton.Location = new System.Drawing.Point(514, 13);
             runButton.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             runButton.Name = "runButton";
             runButton.Size = new System.Drawing.Size(100, 30);
@@ -74,7 +78,7 @@ namespace ExportDXF.Forms
             viewFlipDeciderBox.FormattingEnabled = true;
             viewFlipDeciderBox.Location = new System.Drawing.Point(137, 43);
             viewFlipDeciderBox.Name = "viewFlipDeciderBox";
-            viewFlipDeciderBox.Size = new System.Drawing.Size(502, 25);
+            viewFlipDeciderBox.Size = new System.Drawing.Size(365, 25);
             viewFlipDeciderBox.TabIndex = 3;
             // 
             // mainTabControl
@@ -82,11 +86,12 @@ namespace ExportDXF.Forms
             mainTabControl.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             mainTabControl.Controls.Add(logEventsTab);
             mainTabControl.Controls.Add(bomTab);
+            mainTabControl.Controls.Add(cutTemplatesTab);
             mainTabControl.Location = new System.Drawing.Point(15, 74);
             mainTabControl.Name = "mainTabControl";
             mainTabControl.Padding = new System.Drawing.Point(20, 5);
             mainTabControl.SelectedIndex = 0;
-            mainTabControl.Size = new System.Drawing.Size(741, 586);
+            mainTabControl.Size = new System.Drawing.Size(599, 330);
             mainTabControl.TabIndex = 12;
             // 
             // logEventsTab
@@ -95,7 +100,7 @@ namespace ExportDXF.Forms
             logEventsTab.Location = new System.Drawing.Point(4, 30);
             logEventsTab.Name = "logEventsTab";
             logEventsTab.Padding = new System.Windows.Forms.Padding(3);
-            logEventsTab.Size = new System.Drawing.Size(733, 552);
+            logEventsTab.Size = new System.Drawing.Size(591, 296);
             logEventsTab.TabIndex = 0;
             logEventsTab.Text = "Log Events";
             logEventsTab.UseVisualStyleBackColor = true;
@@ -107,7 +112,7 @@ namespace ExportDXF.Forms
             logEventsDataGrid.GridColor = System.Drawing.Color.WhiteSmoke;
             logEventsDataGrid.Location = new System.Drawing.Point(6, 6);
             logEventsDataGrid.Name = "logEventsDataGrid";
-            logEventsDataGrid.Size = new System.Drawing.Size(721, 540);
+            logEventsDataGrid.Size = new System.Drawing.Size(579, 282);
             logEventsDataGrid.TabIndex = 0;
             // 
             // bomTab
@@ -116,7 +121,7 @@ namespace ExportDXF.Forms
             bomTab.Location = new System.Drawing.Point(4, 30);
             bomTab.Name = "bomTab";
             bomTab.Padding = new System.Windows.Forms.Padding(3);
-            bomTab.Size = new System.Drawing.Size(733, 552);
+            bomTab.Size = new System.Drawing.Size(982, 549);
             bomTab.TabIndex = 1;
             bomTab.Text = "Bill Of Materials";
             bomTab.UseVisualStyleBackColor = true;
@@ -128,9 +133,30 @@ namespace ExportDXF.Forms
             bomDataGrid.GridColor = System.Drawing.Color.WhiteSmoke;
             bomDataGrid.Location = new System.Drawing.Point(6, 6);
             bomDataGrid.Name = "bomDataGrid";
-            bomDataGrid.Size = new System.Drawing.Size(721, 540);
+            bomDataGrid.Size = new System.Drawing.Size(970, 535);
             bomDataGrid.TabIndex = 1;
-            // 
+            //
+            // cutTemplatesTab
+            //
+            cutTemplatesTab.Controls.Add(cutTemplatesDataGrid);
+            cutTemplatesTab.Location = new System.Drawing.Point(4, 30);
+            cutTemplatesTab.Name = "cutTemplatesTab";
+            cutTemplatesTab.Padding = new System.Windows.Forms.Padding(3);
+            cutTemplatesTab.Size = new System.Drawing.Size(982, 549);
+            cutTemplatesTab.TabIndex = 2;
+            cutTemplatesTab.Text = "Cut Templates";
+            cutTemplatesTab.UseVisualStyleBackColor = true;
+            //
+            // cutTemplatesDataGrid
+            //
+            cutTemplatesDataGrid.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            cutTemplatesDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            cutTemplatesDataGrid.GridColor = System.Drawing.Color.WhiteSmoke;
+            cutTemplatesDataGrid.Location = new System.Drawing.Point(6, 6);
+            cutTemplatesDataGrid.Name = "cutTemplatesDataGrid";
+            cutTemplatesDataGrid.Size = new System.Drawing.Size(970, 535);
+            cutTemplatesDataGrid.TabIndex = 2;
+            //
             // equipmentBox
             // 
             equipmentBox.FormattingEnabled = true;
@@ -151,7 +177,7 @@ namespace ExportDXF.Forms
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new System.Drawing.Point(354, 15);
+            label2.Location = new System.Drawing.Point(321, 15);
             label2.Name = "label2";
             label2.Size = new System.Drawing.Size(56, 17);
             label2.TabIndex = 2;
@@ -160,15 +186,15 @@ namespace ExportDXF.Forms
             // drawingNoBox
             // 
             drawingNoBox.FormattingEnabled = true;
-            drawingNoBox.Location = new System.Drawing.Point(416, 12);
+            drawingNoBox.Location = new System.Drawing.Point(383, 12);
             drawingNoBox.Name = "drawingNoBox";
-            drawingNoBox.Size = new System.Drawing.Size(223, 25);
+            drawingNoBox.Size = new System.Drawing.Size(119, 25);
             drawingNoBox.TabIndex = 13;
             // 
             // MainForm
             // 
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            ClientSize = new System.Drawing.Size(768, 672);
+            ClientSize = new System.Drawing.Size(626, 416);
             Controls.Add(drawingNoBox);
             Controls.Add(equipmentBox);
             Controls.Add(mainTabControl);
@@ -180,7 +206,7 @@ namespace ExportDXF.Forms
             Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
             Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             MaximizeBox = false;
-            MinimumSize = new System.Drawing.Size(643, 355);
+            MinimumSize = new System.Drawing.Size(642, 455);
             Name = "MainForm";
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             Text = "ExportDXF";
@@ -189,6 +215,8 @@ namespace ExportDXF.Forms
             ((System.ComponentModel.ISupportInitialize)logEventsDataGrid).EndInit();
             bomTab.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)bomDataGrid).EndInit();
+            cutTemplatesTab.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)cutTemplatesDataGrid).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -203,6 +231,8 @@ namespace ExportDXF.Forms
         private System.Windows.Forms.TabPage bomTab;
         private System.Windows.Forms.DataGridView logEventsDataGrid;
         private System.Windows.Forms.DataGridView bomDataGrid;
+        private System.Windows.Forms.TabPage cutTemplatesTab;
+        private System.Windows.Forms.DataGridView cutTemplatesDataGrid;
         private System.Windows.Forms.ComboBox equipmentBox;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;

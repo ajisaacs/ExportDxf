@@ -23,6 +23,7 @@ namespace ExportDXF.Forms
         private CancellationTokenSource _cancellationTokenSource;
         private readonly BindingList<LogEvent> _logEvents;
         private readonly BindingList<BomItem> _bomItems;
+        private readonly BindingList<CutTemplate> _cutTemplates;
         private List<DrawingInfo> _allDrawings;
 
         public MainForm(ISolidWorksService solidWorksService, IDxfExportService exportService, IFileExportService fileExportService, Func<ExportDxfDbContext> dbContextFactory = null)
@@ -38,10 +39,12 @@ namespace ExportDXF.Forms
             _dbContextFactory = dbContextFactory ?? (() => new ExportDxfDbContext());
             _logEvents = new BindingList<LogEvent>();
             _bomItems = new BindingList<BomItem>();
+            _cutTemplates = new BindingList<CutTemplate>();
             _allDrawings = new List<DrawingInfo>();
             InitializeViewFlipDeciders();
             InitializeLogEventsGrid();
             InitializeBomGrid();
+            InitializeCutTemplatesGrid();
             InitializeDrawingDropdowns();
         }
 
@@ -215,6 +218,61 @@ namespace ExportDXF.Forms
             bomDataGrid.DataSource = _bomItems;
         }
 
+        private void InitializeCutTemplatesGrid()
+        {
+            cutTemplatesDataGrid.Columns.Clear();
+
+            cutTemplatesDataGrid.AutoGenerateColumns = false;
+            cutTemplatesDataGrid.AllowUserToAddRows = false;
+            cutTemplatesDataGrid.AllowUserToDeleteRows = false;
+            cutTemplatesDataGrid.ReadOnly = true;
+            cutTemplatesDataGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutTemplate.CutTemplateName),
+                HeaderText = "Template Name",
+                Width = 150
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutTemplate.DxfFilePath),
+                HeaderText = "DXF File",
+                Width = 250
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutTemplate.Thickness),
+                HeaderText = "Thickness",
+                Width = 80
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutTemplate.KFactor),
+                HeaderText = "K-Factor",
+                Width = 80
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutTemplate.DefaultBendRadius),
+                HeaderText = "Bend Radius",
+                Width = 90
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutTemplate.ContentHash),
+                HeaderText = "Content Hash",
+                Width = 150
+            });
+
+            cutTemplatesDataGrid.DataSource = _cutTemplates;
+        }
+
         private void InitializeDrawingDropdowns()
         {
             try
@@ -319,9 +377,12 @@ namespace ExportDXF.Forms
                     return;
                 }
 
-                // Parse drawing number from active document title
-                var drawingInfo = DrawingInfo.Parse(activeDoc.Title);
-                var filePrefix = drawingInfo != null ? $"{drawingInfo.EquipmentNo} {drawingInfo.DrawingNo}" : activeDoc.Title;
+                // Use equipment/drawing values from the UI dropdowns
+                var equipment = equipmentBox.Text?.Trim();
+                var drawingNo = drawingNoBox.Text?.Trim();
+                var filePrefix = !string.IsNullOrEmpty(equipment) && !string.IsNullOrEmpty(drawingNo)
+                    ? $"{equipment} {drawingNo}"
+                    : activeDoc.Title;
 
                 var viewFlipDecider = GetSelectedViewFlipDecider();
                 var exportContext = new ExportContext
@@ -335,8 +396,9 @@ namespace ExportDXF.Forms
                     BomItemCallback = AddBomItem
                 };
 
-                // Clear previous BOM items
+                // Clear previous BOM items and cut templates
                 _bomItems.Clear();
+                _cutTemplates.Clear();
 
                 LogMessage($"Started at {DateTime.Now:t}");
                 LogMessage($"Exporting to: {_fileExportService.OutputFolder}");
@@ -405,6 +467,22 @@ namespace ExportDXF.Forms
             var activeDoc = _solidWorksService.GetActiveDocument();
             var docTitle = activeDoc?.Title ?? "No Document Open";
             this.Text = $"ExportDXF - {docTitle}";
+
+            // Parse the file name and fill Equipment/Drawing dropdowns
+            if (activeDoc != null)
+            {
+                var drawingInfo = DrawingInfo.Parse(activeDoc.Title);
+                if (drawingInfo != null)
+                {
+                    if (!equipmentBox.Items.Contains(drawingInfo.EquipmentNo))
+                        equipmentBox.Items.Add(drawingInfo.EquipmentNo);
+                    equipmentBox.Text = drawingInfo.EquipmentNo;
+
+                    if (!drawingNoBox.Items.Contains(drawingInfo.DrawingNo))
+                        drawingNoBox.Items.Add(drawingInfo.DrawingNo);
+                    drawingNoBox.Text = drawingInfo.DrawingNo;
+                }
+            }
         }
 
         private void LogMessage(string message, LogLevel level = LogLevel.Info, string file = null)
@@ -451,6 +529,11 @@ namespace ExportDXF.Forms
                 return;
             }
             _bomItems.Add(item);
+
+            if (item.CutTemplate != null)
+            {
+                _cutTemplates.Add(item.CutTemplate);
+            }
         }
 
         private void LogEventsDataGrid_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
