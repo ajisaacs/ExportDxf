@@ -63,6 +63,9 @@ namespace ExportDXF.Services
 
             var startTime = DateTime.Now;
 
+            var drawingNumber = ParseDrawingNumber(context);
+            var outputFolder = _fileExportService.GetDrawingOutputFolder(drawingNumber);
+
             try
             {
                 _solidWorksService.EnableUserControl(false);
@@ -70,15 +73,15 @@ namespace ExportDXF.Services
                 switch (context.ActiveDocument.DocumentType)
                 {
                     case DocumentType.Part:
-                        ExportPart(context);
+                        ExportPart(context, outputFolder);
                         break;
 
                     case DocumentType.Assembly:
-                        ExportAssembly(context);
+                        ExportAssembly(context, outputFolder);
                         break;
 
                     case DocumentType.Drawing:
-                        ExportDrawing(context);
+                        ExportDrawing(context, drawingNumber, outputFolder);
                         break;
 
                     default:
@@ -98,7 +101,7 @@ namespace ExportDXF.Services
 
         #region Export Methods by Document Type
 
-        private void ExportPart(ExportContext context)
+        private void ExportPart(ExportContext context, string outputFolder)
         {
             LogProgress(context, "Active document is a Part");
 
@@ -109,11 +112,10 @@ namespace ExportDXF.Services
                 return;
             }
 
-            // Export directly to the output folder
-            _partExporter.ExportSinglePart(part, _fileExportService.OutputFolder, context);
+            _partExporter.ExportSinglePart(part, outputFolder, context);
         }
 
-        private void ExportAssembly(ExportContext context)
+        private void ExportAssembly(ExportContext context, string outputFolder)
         {
             LogProgress(context, "Active document is an Assembly");
             LogProgress(context, "Fetching components...");
@@ -135,11 +137,10 @@ namespace ExportDXF.Services
 
             LogProgress(context, $"Found {items.Count} item(s).");
 
-            // Export directly to the output folder
-            ExportItems(items, _fileExportService.OutputFolder, context);
+            ExportItems(items, outputFolder, context);
         }
 
-        private void ExportDrawing(ExportContext context)
+        private void ExportDrawing(ExportContext context, string drawingNumber, string drawingOutputFolder)
         {
             LogProgress(context, "Active document is a Drawing");
             LogProgress(context, "Finding BOM tables...");
@@ -160,12 +161,6 @@ namespace ExportDXF.Services
             }
 
             LogProgress(context, $"Found {items.Count} component(s)");
-
-            // Determine drawing number for file naming
-            var drawingNumber = ParseDrawingNumber(context);
-
-            // Resolve output folder: /{outputDir}/{equipmentNo}/{drawingNo}/ or flat fallback
-            var drawingOutputFolder = _fileExportService.GetDrawingOutputFolder(drawingNumber);
 
             // Export drawing to PDF
             var tempDir = CreateTempWorkDir();

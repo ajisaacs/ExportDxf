@@ -32,6 +32,13 @@ namespace ExportDXF.Services
 
     public class PartExporter : IPartExporter
     {
+        private readonly IFileExportService _fileExportService;
+
+        public PartExporter(IFileExportService fileExportService)
+        {
+            _fileExportService = fileExportService ?? throw new ArgumentNullException(nameof(fileExportService));
+        }
+
         public void ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context)
         {
             if (part == null)
@@ -99,12 +106,22 @@ namespace ExportDXF.Services
 
             var templateDrawing = context.GetOrCreateTemplateDrawing();
 
+            // Stash existing file before overwriting
+            item.StashedFilePath = _fileExportService.StashFile(savePath);
+
             if (ExportPartToDxf(part, item.Component.ReferencedConfiguration, savePath, context))
             {
                 item.FileName = Path.GetFileNameWithoutExtension(savePath);
+                item.ContentHash = Utilities.ContentHasher.ComputeDxfContentHash(savePath);
             }
             else
             {
+                // Export failed - restore stashed file if we have one
+                if (item.StashedFilePath != null && File.Exists(item.StashedFilePath))
+                {
+                    File.Move(item.StashedFilePath, savePath, overwrite: true);
+                    item.StashedFilePath = null;
+                }
                 LogExportFailure(item, context);
             }
         }
@@ -274,7 +291,8 @@ namespace ExportDXF.Services
             var isDefaultConfig = string.Equals(config, "default", StringComparison.OrdinalIgnoreCase);
 
             var name = isDefaultConfig ? title : $"{title} [{config}]";
-            return prefix + name;
+
+            return PrependPrefix(name, prefix);
         }
 
         private string GetItemFileName(Item item, string prefix)
@@ -282,15 +300,24 @@ namespace ExportDXF.Services
             prefix = prefix?.Replace("\"", "''") ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(item.ItemNo))
-            {
-                return prefix + item.PartName;
-            }
+                return PrependPrefix(item.PartName, prefix);
 
             var num = item.ItemNo.PadLeft(2, '0');
             // Expected format: {DrawingNo} PT{ItemNo}
             return string.IsNullOrWhiteSpace(prefix)
                 ? $"PT{num}"
                 : $"{prefix} PT{num}";
+        }
+
+        private string PrependPrefix(string name, string prefix)
+        {
+            if (string.IsNullOrEmpty(prefix))
+                return name;
+
+            if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return name;
+
+            return prefix + name;
         }
 
         private void LogExportFailure(Item item, ExportContext context)
