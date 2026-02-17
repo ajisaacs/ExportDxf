@@ -390,6 +390,8 @@ namespace ExportDXF.Forms
                     ActiveDocument = activeDoc,
                     ViewFlipDecider = viewFlipDecider,
                     FilePrefix = filePrefix,
+                    Equipment = equipment,
+                    DrawingNo = drawingNo,
                     EquipmentId = null,
                     CancellationToken = token,
                     ProgressCallback = (msg, level, file) => LogMessage(msg, level, file),
@@ -468,21 +470,58 @@ namespace ExportDXF.Forms
             var docTitle = activeDoc?.Title ?? "No Document Open";
             this.Text = $"ExportDXF - {docTitle}";
 
-            // Parse the file name and fill Equipment/Drawing dropdowns
-            if (activeDoc != null)
-            {
-                var drawingInfo = DrawingInfo.Parse(activeDoc.Title);
-                if (drawingInfo != null)
-                {
-                    if (!equipmentBox.Items.Contains(drawingInfo.EquipmentNo))
-                        equipmentBox.Items.Add(drawingInfo.EquipmentNo);
-                    equipmentBox.Text = drawingInfo.EquipmentNo;
+            if (activeDoc == null)
+                return;
 
-                    if (!drawingNoBox.Items.Contains(drawingInfo.DrawingNo))
-                        drawingNoBox.Items.Add(drawingInfo.DrawingNo);
-                    drawingNoBox.Text = drawingInfo.DrawingNo;
+            // Try database first: look up the most recent export for this file path
+            DrawingInfo drawingInfo = null;
+
+            if (!string.IsNullOrEmpty(activeDoc.FilePath))
+            {
+                drawingInfo = LookupDrawingInfoFromHistory(activeDoc.FilePath);
+            }
+
+            // Fall back to parsing the document title
+            if (drawingInfo == null)
+            {
+                drawingInfo = DrawingInfo.Parse(activeDoc.Title);
+            }
+
+            if (drawingInfo != null)
+            {
+                if (!equipmentBox.Items.Contains(drawingInfo.EquipmentNo))
+                    equipmentBox.Items.Add(drawingInfo.EquipmentNo);
+                equipmentBox.Text = drawingInfo.EquipmentNo;
+
+                if (!drawingNoBox.Items.Contains(drawingInfo.DrawingNo))
+                    drawingNoBox.Items.Add(drawingInfo.DrawingNo);
+                drawingNoBox.Text = drawingInfo.DrawingNo;
+            }
+        }
+
+        private DrawingInfo LookupDrawingInfoFromHistory(string filePath)
+        {
+            try
+            {
+                using (var db = _dbContextFactory())
+                {
+                    var drawingNumber = db.ExportRecords
+                        .Where(r => r.SourceFilePath.ToLower() == filePath.ToLower()
+                                 && !string.IsNullOrEmpty(r.DrawingNumber))
+                        .OrderByDescending(r => r.Id)
+                        .Select(r => r.DrawingNumber)
+                        .FirstOrDefault();
+
+                    if (drawingNumber != null)
+                        return DrawingInfo.Parse(drawingNumber);
                 }
             }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to look up drawing info from history: {ex.Message}");
+            }
+
+            return null;
         }
 
         private void LogMessage(string message, LogLevel level = LogLevel.Info, string file = null)

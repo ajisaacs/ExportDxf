@@ -11,6 +11,7 @@ namespace ExportDXF.Models
         public string OutputFolder { get; set; }
         public DateTime ExportedAt { get; set; }
         public string ExportedBy { get; set; }
+        public string PdfContentHash { get; set; }
 
         public virtual ICollection<BomItem> BomItems { get; set; } = new List<BomItem>();
     }

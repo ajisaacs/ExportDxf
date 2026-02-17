@@ -15,11 +15,12 @@ namespace ExportDXF.Services
     {
         /// <summary>
         /// Exports a single part document to DXF.
+        /// Returns an Item with export metadata (filename, hash, sheet metal properties), or null if export failed.
         /// </summary>
         /// <param name="part">The part document to export.</param>
         /// <param name="saveDirectory">The directory where the DXF file will be saved.</param>
         /// <param name="context">The export context.</param>
-        void ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context);
+        Item ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context);
 
         /// <summary>
         /// Exports an item (component from BOM or assembly) to DXF.
@@ -39,7 +40,7 @@ namespace ExportDXF.Services
             _fileExportService = fileExportService ?? throw new ArgumentNullException(nameof(fileExportService));
         }
 
-        public void ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context)
+        public Item ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context)
         {
             if (part == null)
                 throw new ArgumentNullException(nameof(part));
@@ -59,9 +60,57 @@ namespace ExportDXF.Services
                 var fileName = GetSinglePartFileName(model, context.FilePrefix);
                 var savePath = Path.Combine(saveDirectory, fileName + ".dxf");
 
+                // Build result item with metadata
+                var item = new Item
+                {
+                    PartName = model.GetTitle()?.Replace(".SLDPRT", "") ?? "",
+                    Configuration = originalConfigName ?? "",
+                    Quantity = 1
+                };
+
+                // Enrich with sheet metal properties and description
+                var sheetMetalProps = SolidWorksHelper.GetSheetMetalProperties(model);
+                if (sheetMetalProps != null)
+                {
+                    item.Thickness = sheetMetalProps.Thickness;
+                    item.KFactor = sheetMetalProps.KFactor;
+                    item.BendRadius = sheetMetalProps.BendRadius;
+                }
+
+                // Get description from custom properties
+                var configPropMgr = model.Extension.CustomPropertyManager[originalConfigName];
+                item.Description = configPropMgr?.Get("Description");
+                if (string.IsNullOrEmpty(item.Description))
+                {
+                    var docPropMgr = model.Extension.CustomPropertyManager[""];
+                    item.Description = docPropMgr?.Get("Description");
+                }
+                item.Description = TextHelper.RemoveXmlTags(item.Description);
+
+                // Get material
+                item.Material = part.GetMaterialPropertyName2(originalConfigName, out _);
+
+                // Stash existing file before overwriting
+                item.StashedFilePath = _fileExportService.StashFile(savePath);
+
                 context.GetOrCreateTemplateDrawing();
 
-                ExportPartToDxf(part, originalConfigName, savePath, context);
+                if (ExportPartToDxf(part, originalConfigName, savePath, context))
+                {
+                    item.FileName = Path.GetFileNameWithoutExtension(savePath);
+                    item.ContentHash = Utilities.ContentHasher.ComputeDxfContentHash(savePath);
+                    return item;
+                }
+                else
+                {
+                    // Export failed - restore stashed file
+                    if (item.StashedFilePath != null && File.Exists(item.StashedFilePath))
+                    {
+                        File.Move(item.StashedFilePath, savePath, overwrite: true);
+                        item.StashedFilePath = null;
+                    }
+                    return null;
+                }
             }
             finally
             {
@@ -290,34 +339,20 @@ namespace ExportDXF.Services
             var config = model.ConfigurationManager.ActiveConfiguration.Name;
             var isDefaultConfig = string.Equals(config, "default", StringComparison.OrdinalIgnoreCase);
 
-            var name = isDefaultConfig ? title : $"{title} [{config}]";
-
-            return PrependPrefix(name, prefix);
+            return isDefaultConfig ? title : $"{title} [{config}]";
         }
 
         private string GetItemFileName(Item item, string prefix)
         {
-            prefix = prefix?.Replace("\"", "''") ?? string.Empty;
-
             if (string.IsNullOrWhiteSpace(item.ItemNo))
-                return PrependPrefix(item.PartName, prefix);
+                return item.PartName;
 
+            prefix = prefix?.Replace("\"", "''") ?? string.Empty;
             var num = item.ItemNo.PadLeft(2, '0');
             // Expected format: {DrawingNo} PT{ItemNo}
             return string.IsNullOrWhiteSpace(prefix)
                 ? $"PT{num}"
                 : $"{prefix} PT{num}";
-        }
-
-        private string PrependPrefix(string name, string prefix)
-        {
-            if (string.IsNullOrEmpty(prefix))
-                return name;
-
-            if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                return name;
-
-            return prefix + name;
         }
 
         private void LogExportFailure(Item item, ExportContext context)

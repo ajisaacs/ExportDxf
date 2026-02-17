@@ -33,6 +33,16 @@ namespace ExportDXF.Services
         public string FilePrefix { get; set; }
 
         /// <summary>
+        /// Equipment number from the UI (e.g., "5028").
+        /// </summary>
+        public string Equipment { get; set; }
+
+        /// <summary>
+        /// Drawing number from the UI (e.g., "A02", "Misc").
+        /// </summary>
+        public string DrawingNo { get; set; }
+
+        /// <summary>
         /// Selected Equipment ID for API operations (optional).
         /// </summary>
         public int? EquipmentId { get; set; }

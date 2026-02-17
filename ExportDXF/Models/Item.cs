@@ -61,5 +61,15 @@ namespace ExportDXF.Services
         /// The SolidWorks component reference.
         /// </summary>
         public Component2 Component { get; set; }
+
+        /// <summary>
+        /// SHA256 content hash of the exported DXF (transient, not persisted).
+        /// </summary>
+        public string ContentHash { get; set; }
+
+        /// <summary>
+        /// Path to the stashed (backed-up) previous DXF file (transient, not persisted).
+        /// </summary>
+        public string StashedFilePath { get; set; }
     }
 }

@@ -39,9 +39,9 @@ namespace ExportDXF
         {
             var solidWorksService = new SolidWorksService();
             var bomExtractor = new BomExtractor();
-            var partExporter = new PartExporter();
-            var drawingExporter = new DrawingExporter();
             var fileExportService = new FileExportService(_outputFolder);
+            var partExporter = new PartExporter(fileExportService);
+            var drawingExporter = new DrawingExporter();
 
             var exportService = new DxfExportService(
                 solidWorksService,
