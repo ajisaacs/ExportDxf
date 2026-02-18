@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FabWorks.Core\FabWorks.Core.csproj" />
+    <ProjectReference Include="..\FabWorks.Api\FabWorks.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
