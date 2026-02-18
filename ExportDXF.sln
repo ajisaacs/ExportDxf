@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabWorks.Core", "FabWorks.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabWorks.Tests", "FabWorks.Tests\FabWorks.Tests.csproj", "{6DD89774-D86B-47E9-B982-2794BD95616A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabWorks.Api", "FabWorks.Api\FabWorks.Api.csproj", "{9BD571FA-52D8-430D-8843-FEB6EABD421C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|x64.Build.0 = Release|Any CPU
 		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|x86.ActiveCfg = Release|Any CPU
 		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|x86.Build.0 = Release|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Debug|x64.Build.0 = Debug|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Debug|x86.Build.0 = Debug|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Release|x64.ActiveCfg = Release|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Release|x64.Build.0 = Release|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Release|x86.ActiveCfg = Release|Any CPU
+		{9BD571FA-52D8-430D-8843-FEB6EABD421C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
