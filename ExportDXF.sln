@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "netDxf", "EtchBendLines\net
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabWorks.Core", "FabWorks.Core\FabWorks.Core.csproj", "{24547EE4-2EAA-4A6C-AD94-1117C038D8CD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FabWorks.Tests", "FabWorks.Tests\FabWorks.Tests.csproj", "{6DD89774-D86B-47E9-B982-2794BD95616A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{24547EE4-2EAA-4A6C-AD94-1117C038D8CD}.Release|x64.Build.0 = Release|Any CPU
 		{24547EE4-2EAA-4A6C-AD94-1117C038D8CD}.Release|x86.ActiveCfg = Release|Any CPU
 		{24547EE4-2EAA-4A6C-AD94-1117C038D8CD}.Release|x86.Build.0 = Release|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Debug|x64.Build.0 = Debug|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Debug|x86.Build.0 = Debug|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|x64.ActiveCfg = Release|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|x64.Build.0 = Release|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|x86.ActiveCfg = Release|Any CPU
+		{6DD89774-D86B-47E9-B982-2794BD95616A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
