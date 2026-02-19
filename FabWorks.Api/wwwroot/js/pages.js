@@ -168,7 +168,10 @@ const pages = {
                     <div class="card-header">
                         BOM Items
                         <span class="badge badge-count">${exp.bomItems?.length || 0} items</span>
-                        ${dxfCount > 0 ? `<a class="btn btn-cyan btn-sm" style="margin-left:auto" href="/api/exports/${exp.id}/download-dxfs">${icons.download} Download All DXFs</a>` : ''}
+                        <span style="margin-left:auto;display:flex;gap:6px">
+                            ${exp.pdfContentHash ? `<a class="btn btn-amber btn-sm" href="/api/filebrowser/download?hash=${encodeURIComponent(exp.pdfContentHash)}&ext=pdf&name=${encodeURIComponent((exp.drawingNumber || 'drawing') + '.pdf')}">${icons.download} PDF</a>` : ''}
+                            ${dxfCount > 0 ? `<a class="btn btn-cyan btn-sm" href="/api/exports/${exp.id}/download-dxfs">${icons.download} All DXFs</a>` : ''}
+                        </span>
                     </div>
                     ${exp.bomItems?.length ? `
                     <table>
