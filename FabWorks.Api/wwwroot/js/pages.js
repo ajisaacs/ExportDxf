@@ -74,7 +74,7 @@ const pages = {
                             <td style="color:var(--text-secondary);font-size:13px">${esc(e.title) || ''}</td>
                             <td><span class="badge badge-count">${e.bomItemCount}</span></td>
                             <td style="color:var(--text-secondary)">${esc(e.exportedBy)}</td>
-                            <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">${fmtDate(e.exportedAt)}</td>
+                            <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);white-space:nowrap">${fmtDate(e.exportedAt)}</td>
                         </tr>`;
                 }).join('');
 
