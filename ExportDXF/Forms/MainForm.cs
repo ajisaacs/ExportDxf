@@ -477,12 +477,20 @@ namespace ExportDXF.Forms
 
             if (drawingInfo != null)
             {
+                // Detach event to prevent async race when setting equipment
+                equipmentBox.SelectedIndexChanged -= EquipmentBox_SelectedIndexChanged;
+
                 if (!string.IsNullOrEmpty(drawingInfo.EquipmentNo))
                 {
                     if (!equipmentBox.Items.Contains(drawingInfo.EquipmentNo))
                         equipmentBox.Items.Add(drawingInfo.EquipmentNo);
                     equipmentBox.Text = drawingInfo.EquipmentNo;
                 }
+
+                // Load drawings for the selected equipment, then set drawing number
+                await UpdateDrawingDropdownAsync();
+
+                equipmentBox.SelectedIndexChanged += EquipmentBox_SelectedIndexChanged;
 
                 if (!string.IsNullOrEmpty(drawingInfo.DrawingNo))
                 {

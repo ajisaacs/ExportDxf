@@ -82,6 +82,17 @@ namespace FabWorks.Api.Services
             var wasUnchanged = previousHash != null && previousHash == contentHash;
             var isNewFile = await StoreBlobAsync(stream, contentHash, "pdf");
 
+            // Update the export record with the PDF content hash
+            if (exportRecordId.HasValue)
+            {
+                var record = await _db.ExportRecords.FindAsync(exportRecordId.Value);
+                if (record != null)
+                {
+                    record.PdfContentHash = contentHash;
+                    await _db.SaveChangesAsync();
+                }
+            }
+
             return new FileUploadResult
             {
                 ContentHash = contentHash,
