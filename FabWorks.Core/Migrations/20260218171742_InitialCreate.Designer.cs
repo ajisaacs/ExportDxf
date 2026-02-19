@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FabWorks.Core.Migrations
 {
     [DbContext(typeof(FabWorksDbContext))]
-    [Migration("20260218113525_InitialCreate")]
+    [Migration("20260218171742_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -124,9 +124,17 @@ namespace FabWorks.Core.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("DrawingNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("DrawingNumber")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EquipmentNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("ExportedAt")
                         .HasColumnType("datetime2");
@@ -146,6 +154,10 @@ namespace FabWorks.Core.Migrations
                     b.Property<string>("SourceFilePath")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
