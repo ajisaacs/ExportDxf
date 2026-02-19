@@ -102,6 +102,9 @@ namespace FabWorks.Core.Migrations
                     b.Property<double?>("KFactor")
                         .HasColumnType("float");
 
+                    b.Property<int>("Revision")
+                        .HasColumnType("int");
+
                     b.Property<double?>("Thickness")
                         .HasColumnType("float");
 

@@ -239,6 +239,7 @@ namespace FabWorks.Api.Controllers
                 Id = ct.Id,
                 DxfFilePath = ct.DxfFilePath,
                 ContentHash = ct.ContentHash,
+                Revision = ct.Revision,
                 Thickness = ct.Thickness,
                 KFactor = ct.KFactor,
                 DefaultBendRadius = ct.DefaultBendRadius
@@ -324,6 +325,7 @@ namespace FabWorks.Api.Controllers
                     Id = b.CutTemplate.Id,
                     DxfFilePath = b.CutTemplate.DxfFilePath,
                     ContentHash = b.CutTemplate.ContentHash,
+                    Revision = b.CutTemplate.Revision,
                     Thickness = b.CutTemplate.Thickness,
                     KFactor = b.CutTemplate.KFactor,
                     DefaultBendRadius = b.CutTemplate.DefaultBendRadius

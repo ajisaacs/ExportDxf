@@ -53,12 +53,16 @@ namespace FabWorks.Api.Controllers
             var export = await _db.ExportRecords.FindAsync(exportId);
             if (export == null) return NotFound("Export record not found");
 
-            // Look for existing BomItem with same PartName + ConfigurationName under the same drawing
+            // Look up the latest CutTemplate for this drawing+item across all previous exports
+            // to determine the revision number
+            var newContentHash = dto.CutTemplate?.ContentHash;
+            int revision = await ResolveRevisionAsync(export.DrawingNumber, dto.ItemNo, newContentHash);
+
+            // Look for existing BomItem with same PartName + ConfigurationName within this export record
             var existing = await _db.BomItems
                 .Include(b => b.CutTemplate)
                 .Include(b => b.FormProgram)
-                .Include(b => b.ExportRecord)
-                .Where(b => b.ExportRecord.DrawingNumber == export.DrawingNumber
+                .Where(b => b.ExportRecordId == exportId
                          && b.PartName == (dto.PartName ?? "")
                          && b.ConfigurationName == (dto.ConfigurationName ?? ""))
                 .OrderByDescending(b => b.ID)
@@ -66,8 +70,7 @@ namespace FabWorks.Api.Controllers
 
             if (existing != null)
             {
-                // Update existing: move to new export record and refresh fields
-                existing.ExportRecordId = exportId;
+                // Update existing fields
                 existing.PartNo = dto.PartNo ?? "";
                 existing.SortOrder = dto.SortOrder;
                 existing.Qty = dto.Qty;
@@ -81,6 +84,7 @@ namespace FabWorks.Api.Controllers
                     {
                         existing.CutTemplate.DxfFilePath = dto.CutTemplate.DxfFilePath ?? "";
                         existing.CutTemplate.ContentHash = dto.CutTemplate.ContentHash;
+                        existing.CutTemplate.Revision = revision;
                         existing.CutTemplate.Thickness = dto.CutTemplate.Thickness;
                         existing.CutTemplate.KFactor = dto.CutTemplate.KFactor;
                         existing.CutTemplate.DefaultBendRadius = dto.CutTemplate.DefaultBendRadius;
@@ -91,6 +95,7 @@ namespace FabWorks.Api.Controllers
                         {
                             DxfFilePath = dto.CutTemplate.DxfFilePath ?? "",
                             ContentHash = dto.CutTemplate.ContentHash,
+                            Revision = revision,
                             Thickness = dto.CutTemplate.Thickness,
                             KFactor = dto.CutTemplate.KFactor,
                             DefaultBendRadius = dto.CutTemplate.DefaultBendRadius
@@ -156,6 +161,7 @@ namespace FabWorks.Api.Controllers
                 {
                     DxfFilePath = dto.CutTemplate.DxfFilePath ?? "",
                     ContentHash = dto.CutTemplate.ContentHash,
+                    Revision = revision,
                     Thickness = dto.CutTemplate.Thickness,
                     KFactor = dto.CutTemplate.KFactor,
                     DefaultBendRadius = dto.CutTemplate.DefaultBendRadius
@@ -185,6 +191,33 @@ namespace FabWorks.Api.Controllers
             return CreatedAtAction(nameof(GetByExport), new { exportId }, MapToDto(item));
         }
 
+        /// <summary>
+        /// Determines the revision number for a CutTemplate by looking at the most recent
+        /// CutTemplate for the same drawing number and item number across all exports.
+        /// Returns 1 if no previous version exists, the same revision if the hash matches,
+        /// or previous revision + 1 if the hash changed.
+        /// </summary>
+        private async Task<int> ResolveRevisionAsync(string drawingNumber, string itemNo, string contentHash)
+        {
+            if (string.IsNullOrEmpty(drawingNumber) || string.IsNullOrEmpty(itemNo) || string.IsNullOrEmpty(contentHash))
+                return 1;
+
+            var previous = await _db.CutTemplates
+                .Where(c => c.BomItem.ExportRecord.DrawingNumber == drawingNumber
+                         && c.BomItem.ItemNo == itemNo
+                         && c.ContentHash != null)
+                .OrderByDescending(c => c.Id)
+                .Select(c => new { c.ContentHash, c.Revision })
+                .FirstOrDefaultAsync();
+
+            if (previous == null)
+                return 1;
+
+            return previous.ContentHash == contentHash
+                ? previous.Revision
+                : previous.Revision + 1;
+        }
+
         private static BomItemDto MapToDto(BomItem b) => new()
         {
             ID = b.ID,
@@ -202,6 +235,7 @@ namespace FabWorks.Api.Controllers
                 Id = b.CutTemplate.Id,
                 DxfFilePath = b.CutTemplate.DxfFilePath,
                 ContentHash = b.CutTemplate.ContentHash,
+                Revision = b.CutTemplate.Revision,
                 Thickness = b.CutTemplate.Thickness,
                 KFactor = b.CutTemplate.KFactor,
                 DefaultBendRadius = b.CutTemplate.DefaultBendRadius

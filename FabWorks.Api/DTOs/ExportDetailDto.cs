@@ -39,6 +39,7 @@ namespace FabWorks.Api.DTOs
         public int Id { get; set; }
         public string DxfFilePath { get; set; }
         public string ContentHash { get; set; }
+        public int Revision { get; set; }
         public double? Thickness { get; set; }
         public double? KFactor { get; set; }
         public double? DefaultBendRadius { get; set; }

@@ -16,6 +16,8 @@ namespace FabWorks.Core.Models
             set => _thickness = value.HasValue ? Math.Round(value.Value, 8) : null;
         }
 
+        public int Revision { get; set; } = 1;
+
         public double? KFactor { get; set; }
 
         private double? _defaultBendRadius;
