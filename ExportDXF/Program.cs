@@ -1,7 +1,9 @@
+using ExportDXF.ApiClient;
 using ExportDXF.Forms;
 using ExportDXF.Services;
 using System;
 using System.Configuration;
+using System.Net.Http;
 using System.Windows.Forms;
 
 namespace ExportDXF
@@ -28,29 +30,35 @@ namespace ExportDXF
     /// </summary>
     public class ServiceContainer
     {
-        private readonly string _outputFolder;
+        private readonly string _apiBaseUrl;
 
         public ServiceContainer()
         {
-            _outputFolder = ConfigurationManager.AppSettings["ExportOutputFolder"] ?? @"C:\ExportDXF\Output";
+            _apiBaseUrl = ConfigurationManager.AppSettings["FabWorksApiUrl"] ?? "http://localhost:5206";
         }
 
         public MainForm ResolveMainForm()
         {
             var solidWorksService = new SolidWorksService();
             var bomExtractor = new BomExtractor();
-            var fileExportService = new FileExportService(_outputFolder);
-            var partExporter = new PartExporter(fileExportService);
+            var partExporter = new PartExporter();
             var drawingExporter = new DrawingExporter();
+
+            var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(_apiBaseUrl),
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+            var apiClient = new FabWorksApiClient(httpClient);
 
             var exportService = new DxfExportService(
                 solidWorksService,
                 bomExtractor,
                 partExporter,
                 drawingExporter,
-                fileExportService);
+                apiClient);
 
-            return new MainForm(solidWorksService, exportService, fileExportService);
+            return new MainForm(solidWorksService, exportService, apiClient);
         }
     }
 }

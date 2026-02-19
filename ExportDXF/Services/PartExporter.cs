@@ -1,4 +1,4 @@
-﻿using ExportDXF.Extensions;
+using ExportDXF.Extensions;
 using ExportDXF.Models;
 using ExportDXF.Utilities;
 using SolidWorks.Interop.sldworks;
@@ -18,7 +18,7 @@ namespace ExportDXF.Services
         /// Returns an Item with export metadata (filename, hash, sheet metal properties), or null if export failed.
         /// </summary>
         /// <param name="part">The part document to export.</param>
-        /// <param name="saveDirectory">The directory where the DXF file will be saved.</param>
+        /// <param name="saveDirectory">The temp directory where the DXF file will be saved.</param>
         /// <param name="context">The export context.</param>
         Item ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context);
 
@@ -26,18 +26,15 @@ namespace ExportDXF.Services
         /// Exports an item (component from BOM or assembly) to DXF.
         /// </summary>
         /// <param name="item">The item to export.</param>
-        /// <param name="saveDirectory">The directory where the DXF file will be saved.</param>
+        /// <param name="saveDirectory">The temp directory where the DXF file will be saved.</param>
         /// <param name="context">The export context.</param>
         void ExportItem(Item item, string saveDirectory, ExportContext context);
     }
 
     public class PartExporter : IPartExporter
     {
-        private readonly IFileExportService _fileExportService;
-
-        public PartExporter(IFileExportService fileExportService)
+        public PartExporter()
         {
-            _fileExportService = fileExportService ?? throw new ArgumentNullException(nameof(fileExportService));
         }
 
         public Item ExportSinglePart(PartDoc part, string saveDirectory, ExportContext context)
@@ -90,25 +87,17 @@ namespace ExportDXF.Services
                 // Get material
                 item.Material = part.GetMaterialPropertyName2(originalConfigName, out _);
 
-                // Stash existing file before overwriting
-                item.StashedFilePath = _fileExportService.StashFile(savePath);
-
                 context.GetOrCreateTemplateDrawing();
 
                 if (ExportPartToDxf(part, originalConfigName, savePath, context))
                 {
                     item.FileName = Path.GetFileNameWithoutExtension(savePath);
                     item.ContentHash = Utilities.ContentHasher.ComputeDxfContentHash(savePath);
+                    item.LocalTempPath = savePath;
                     return item;
                 }
                 else
                 {
-                    // Export failed - restore stashed file
-                    if (item.StashedFilePath != null && File.Exists(item.StashedFilePath))
-                    {
-                        File.Move(item.StashedFilePath, savePath, overwrite: true);
-                        item.StashedFilePath = null;
-                    }
                     return null;
                 }
             }
@@ -155,22 +144,14 @@ namespace ExportDXF.Services
 
             var templateDrawing = context.GetOrCreateTemplateDrawing();
 
-            // Stash existing file before overwriting
-            item.StashedFilePath = _fileExportService.StashFile(savePath);
-
             if (ExportPartToDxf(part, item.Component.ReferencedConfiguration, savePath, context))
             {
                 item.FileName = Path.GetFileNameWithoutExtension(savePath);
                 item.ContentHash = Utilities.ContentHasher.ComputeDxfContentHash(savePath);
+                item.LocalTempPath = savePath;
             }
             else
             {
-                // Export failed - restore stashed file if we have one
-                if (item.StashedFilePath != null && File.Exists(item.StashedFilePath))
-                {
-                    File.Move(item.StashedFilePath, savePath, overwrite: true);
-                    item.StashedFilePath = null;
-                }
                 LogExportFailure(item, context);
             }
         }

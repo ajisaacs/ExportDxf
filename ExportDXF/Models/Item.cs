@@ -68,8 +68,9 @@ namespace ExportDXF.Services
         public string ContentHash { get; set; }
 
         /// <summary>
-        /// Path to the stashed (backed-up) previous DXF file (transient, not persisted).
+        /// Full path to the locally-exported DXF temp file (transient, not persisted).
+        /// Set after successful export; used for upload to the API.
         /// </summary>
-        public string StashedFilePath { get; set; }
+        public string LocalTempPath { get; set; }
     }
 }

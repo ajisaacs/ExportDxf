@@ -1,4 +1,4 @@
-using ExportDXF.Data;
+using ExportDXF.ApiClient;
 using ExportDXF.Extensions;
 using ExportDXF.Models;
 using ExportDXF.Services;
@@ -18,15 +18,14 @@ namespace ExportDXF.Forms
     {
         private readonly ISolidWorksService _solidWorksService;
         private readonly IDxfExportService _exportService;
-        private readonly IFileExportService _fileExportService;
-        private readonly Func<ExportDxfDbContext> _dbContextFactory;
+        private readonly IFabWorksApiClient _apiClient;
         private CancellationTokenSource _cancellationTokenSource;
         private readonly BindingList<LogEvent> _logEvents;
         private readonly BindingList<BomItem> _bomItems;
         private readonly BindingList<CutTemplate> _cutTemplates;
         private List<DrawingInfo> _allDrawings;
 
-        public MainForm(ISolidWorksService solidWorksService, IDxfExportService exportService, IFileExportService fileExportService, Func<ExportDxfDbContext> dbContextFactory = null)
+        public MainForm(ISolidWorksService solidWorksService, IDxfExportService exportService, IFabWorksApiClient apiClient)
         {
             InitializeComponent();
             _solidWorksService = solidWorksService ??
@@ -34,9 +33,8 @@ namespace ExportDXF.Forms
             _solidWorksService.ActiveDocumentChanged += OnActiveDocumentChanged;
             _exportService = exportService ??
                 throw new ArgumentNullException(nameof(exportService));
-            _fileExportService = fileExportService ??
-                throw new ArgumentNullException(nameof(fileExportService));
-            _dbContextFactory = dbContextFactory ?? (() => new ExportDxfDbContext());
+            _apiClient = apiClient ??
+                throw new ArgumentNullException(nameof(apiClient));
             _logEvents = new BindingList<LogEvent>();
             _bomItems = new BindingList<BomItem>();
             _cutTemplates = new BindingList<CutTemplate>();
@@ -70,9 +68,10 @@ namespace ExportDXF.Forms
                 LogMessage("Connecting to SolidWorks, this may take a minute...");
                 await _solidWorksService.ConnectAsync();
                 _solidWorksService.ActiveDocumentChanged += OnActiveDocumentChanged;
-                LogMessage($"Output folder: {_fileExportService.OutputFolder}");
+                LogMessage("Files will be uploaded to FabWorks API");
+                await LoadDrawingDropdownsAsync();
                 LogMessage("Ready");
-                UpdateActiveDocumentDisplay();
+                await UpdateActiveDocumentDisplayAsync();
                 runButton.Enabled = true;
             }
             catch (Exception ex)
@@ -275,73 +274,59 @@ namespace ExportDXF.Forms
 
         private void InitializeDrawingDropdowns()
         {
+            // Wire up event handler; actual data loading happens in LoadDrawingDropdownsAsync
+            equipmentBox.SelectedIndexChanged += EquipmentBox_SelectedIndexChanged;
+        }
+
+        private async Task LoadDrawingDropdownsAsync()
+        {
             try
             {
-                using (var db = _dbContextFactory())
+                var equipmentNumbers = await _apiClient.GetEquipmentNumbersAsync();
+
+                equipmentBox.Items.Clear();
+                equipmentBox.Items.Add("");
+                foreach (var eq in equipmentNumbers)
                 {
-                    // Get all drawing numbers from the database
-                    var drawingNumbers = db.ExportRecords
-                        .Select(r => r.DrawingNumber)
-                        .Where(d => !string.IsNullOrEmpty(d))
-                        .Distinct()
-                        .ToList();
-
-                    // Parse into DrawingInfo objects
-                    _allDrawings = drawingNumbers
-                        .Select(DrawingInfo.Parse)
-                        .Where(d => d != null)
-                        .Distinct()
-                        .OrderBy(d => d.EquipmentNo)
-                        .ThenBy(d => d.DrawingNo)
-                        .ToList();
-
-                    // Get distinct equipment numbers
-                    var equipmentNumbers = _allDrawings
-                        .Select(d => d.EquipmentNo)
-                        .Distinct()
-                        .OrderBy(e => e)
-                        .ToList();
-
-                    // Populate equipment dropdown
-                    equipmentBox.Items.Clear();
-                    equipmentBox.Items.Add(""); // Empty option for "all"
-                    foreach (var eq in equipmentNumbers)
-                    {
-                        equipmentBox.Items.Add(eq);
-                    }
-
-                    // Populate drawing dropdown with all drawings initially
-                    UpdateDrawingDropdown();
-
-                    // Wire up event handler for equipment selection change
-                    equipmentBox.SelectedIndexChanged += EquipmentBox_SelectedIndexChanged;
+                    equipmentBox.Items.Add(eq);
                 }
+
+                // Clear _allDrawings — drawing list is now loaded on equipment selection
+                _allDrawings = new List<DrawingInfo>();
+                await UpdateDrawingDropdownAsync();
             }
             catch (Exception ex)
             {
-                // Database might not exist yet - that's OK
-                System.Diagnostics.Debug.WriteLine($"Failed to load drawings from database: {ex.Message}");
+                // API might not be available yet - that's OK
+                System.Diagnostics.Debug.WriteLine($"Failed to load equipment numbers from API: {ex.Message}");
             }
         }
 
-        private void EquipmentBox_SelectedIndexChanged(object sender, EventArgs e)
+        private async void EquipmentBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UpdateDrawingDropdown();
+            await UpdateDrawingDropdownAsync();
         }
 
-        private void UpdateDrawingDropdown()
+        private async Task UpdateDrawingDropdownAsync()
         {
             var selectedEquipment = equipmentBox.SelectedItem?.ToString();
 
-            var filteredDrawings = string.IsNullOrEmpty(selectedEquipment)
-                ? _allDrawings
-                : _allDrawings.Where(d => d.EquipmentNo == selectedEquipment).ToList();
-
             drawingNoBox.Items.Clear();
-            drawingNoBox.Items.Add(""); // Empty option
-            foreach (var drawing in filteredDrawings)
+            drawingNoBox.Items.Add("");
+
+            try
             {
-                drawingNoBox.Items.Add(drawing.DrawingNo);
+                var drawingNumbers = await _apiClient.GetDrawingNumbersByEquipmentAsync(
+                    string.IsNullOrEmpty(selectedEquipment) ? null : selectedEquipment);
+
+                foreach (var dn in drawingNumbers)
+                {
+                    drawingNoBox.Items.Add(dn);
+                }
+            }
+            catch
+            {
+                // API might not be available
             }
 
             if (drawingNoBox.Items.Count > 0)
@@ -380,11 +365,13 @@ namespace ExportDXF.Forms
                 // Use equipment/drawing values from the UI dropdowns
                 var equipment = equipmentBox.Text?.Trim();
                 var drawingNo = drawingNoBox.Text?.Trim();
-                var filePrefix = !string.IsNullOrEmpty(equipment) && !string.IsNullOrEmpty(drawingNo)
-                    ? $"{equipment} {drawingNo}"
+                var filePrefix = !string.IsNullOrEmpty(equipment)
+                    ? (!string.IsNullOrEmpty(drawingNo) ? $"{equipment} {drawingNo}" : equipment)
                     : activeDoc.Title;
 
                 var viewFlipDecider = GetSelectedViewFlipDecider();
+                var title = titleBox.Text?.Trim();
+
                 var exportContext = new ExportContext
                 {
                     ActiveDocument = activeDoc,
@@ -392,6 +379,7 @@ namespace ExportDXF.Forms
                     FilePrefix = filePrefix,
                     Equipment = equipment,
                     DrawingNo = drawingNo,
+                    Title = string.IsNullOrEmpty(title) ? null : title,
                     EquipmentId = null,
                     CancellationToken = token,
                     ProgressCallback = (msg, level, file) => LogMessage(msg, level, file),
@@ -403,11 +391,11 @@ namespace ExportDXF.Forms
                 _cutTemplates.Clear();
 
                 LogMessage($"Started at {DateTime.Now:t}");
-                LogMessage($"Exporting to: {_fileExportService.OutputFolder}");
+                LogMessage("Exporting (files will be uploaded to API)...");
 
                 _solidWorksService.SetCommandInProgress(true);
 
-                await Task.Run(() => _exportService.Export(exportContext), token);
+                await Task.Run(async () => await _exportService.ExportAsync(exportContext), token);
 
                 LogMessage("Done.");
             }
@@ -454,17 +442,17 @@ namespace ExportDXF.Forms
             runButton.Enabled = true;
         }
 
-        private void OnActiveDocumentChanged(object sender, EventArgs e)
+        private async void OnActiveDocumentChanged(object sender, EventArgs e)
         {
             if (InvokeRequired)
             {
-                Invoke(new Action(() => OnActiveDocumentChanged(sender, e)));
+                Invoke(new Action(async () => await UpdateActiveDocumentDisplayAsync()));
                 return;
             }
-            UpdateActiveDocumentDisplay();
+            await UpdateActiveDocumentDisplayAsync();
         }
 
-        private void UpdateActiveDocumentDisplay()
+        private async Task UpdateActiveDocumentDisplayAsync()
         {
             var activeDoc = _solidWorksService.GetActiveDocument();
             var docTitle = activeDoc?.Title ?? "No Document Open";
@@ -473,12 +461,12 @@ namespace ExportDXF.Forms
             if (activeDoc == null)
                 return;
 
-            // Try database first: look up the most recent export for this file path
+            // Try API first: look up the most recent export for this file path
             DrawingInfo drawingInfo = null;
 
             if (!string.IsNullOrEmpty(activeDoc.FilePath))
             {
-                drawingInfo = LookupDrawingInfoFromHistory(activeDoc.FilePath);
+                drawingInfo = await LookupDrawingInfoFromHistoryAsync(activeDoc.FilePath);
             }
 
             // Fall back to parsing the document title
@@ -489,36 +477,37 @@ namespace ExportDXF.Forms
 
             if (drawingInfo != null)
             {
-                if (!equipmentBox.Items.Contains(drawingInfo.EquipmentNo))
-                    equipmentBox.Items.Add(drawingInfo.EquipmentNo);
-                equipmentBox.Text = drawingInfo.EquipmentNo;
+                if (!string.IsNullOrEmpty(drawingInfo.EquipmentNo))
+                {
+                    if (!equipmentBox.Items.Contains(drawingInfo.EquipmentNo))
+                        equipmentBox.Items.Add(drawingInfo.EquipmentNo);
+                    equipmentBox.Text = drawingInfo.EquipmentNo;
+                }
 
-                if (!drawingNoBox.Items.Contains(drawingInfo.DrawingNo))
-                    drawingNoBox.Items.Add(drawingInfo.DrawingNo);
-                drawingNoBox.Text = drawingInfo.DrawingNo;
+                if (!string.IsNullOrEmpty(drawingInfo.DrawingNo))
+                {
+                    if (!drawingNoBox.Items.Contains(drawingInfo.DrawingNo))
+                        drawingNoBox.Items.Add(drawingInfo.DrawingNo);
+                    drawingNoBox.Text = drawingInfo.DrawingNo;
+                }
             }
         }
 
-        private DrawingInfo LookupDrawingInfoFromHistory(string filePath)
+        private async Task<DrawingInfo> LookupDrawingInfoFromHistoryAsync(string filePath)
         {
             try
             {
-                using (var db = _dbContextFactory())
+                var dto = await _apiClient.GetExportBySourceFileAsync(filePath);
+                if (dto != null && !string.IsNullOrEmpty(dto.DrawingNumber))
                 {
-                    var drawingNumber = db.ExportRecords
-                        .Where(r => r.SourceFilePath.ToLower() == filePath.ToLower()
-                                 && !string.IsNullOrEmpty(r.DrawingNumber))
-                        .OrderByDescending(r => r.Id)
-                        .Select(r => r.DrawingNumber)
-                        .FirstOrDefault();
-
-                    if (drawingNumber != null)
-                        return DrawingInfo.Parse(drawingNumber);
+                    if (!string.IsNullOrEmpty(dto.Title))
+                        titleBox.Text = dto.Title;
+                    return DrawingInfo.Parse(dto.DrawingNumber);
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to look up drawing info from history: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Failed to look up drawing info from API: {ex.Message}");
             }
 
             return null;
