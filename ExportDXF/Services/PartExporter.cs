@@ -316,8 +316,11 @@ namespace ExportDXF.Services
         }
 
         /// <summary>
-        /// ACadSharp misreads the UTF-8 degree symbol (C2 B0) as two ANSI_1252
-        /// characters (Â°). Fix it in the written DXF so bend notes display correctly.
+        /// Workaround for ACadSharp encoding bug (no upstream fix as of v3.4.9).
+        /// ACadSharp's DxfReader uses $DWGCODEPAGE (ANSI_1252) to decode text, but
+        /// AC1018+ DXF files use UTF-8. The degree symbol ° (UTF-8: C2 B0) gets
+        /// misread as two ANSI_1252 characters: Â (C2) and ° (B0).
+        /// See: https://github.com/DomCR/ACadSharp/issues?q=encoding
         /// </summary>
         private static void FixDegreeSymbol(string path)
         {
