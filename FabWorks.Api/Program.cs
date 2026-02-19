@@ -17,6 +17,10 @@ builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 var app = builder.Build();
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+        ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store")
+});
 app.MapControllers();
 app.Run();

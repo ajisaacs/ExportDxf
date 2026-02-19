@@ -384,6 +384,18 @@ tbody tr:last-child td { border-bottom: none; }
     color: var(--amber);
 }
 
+.btn-red {
+    background: rgba(217, 45, 32, 0.08);
+    color: var(--red);
+    border-color: rgba(217, 45, 32, 0.25);
+}
+
+.btn-red:hover {
+    background: rgba(217, 45, 32, 0.15);
+    border-color: rgba(217, 45, 32, 0.4);
+    color: var(--red);
+}
+
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 
 /* ─── Search ─── */

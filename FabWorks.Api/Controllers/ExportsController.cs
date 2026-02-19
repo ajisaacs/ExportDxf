@@ -246,6 +246,22 @@ namespace FabWorks.Api.Controllers
             };
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var record = await _db.ExportRecords
+                .Include(r => r.BomItems).ThenInclude(b => b.CutTemplate)
+                .Include(r => r.BomItems).ThenInclude(b => b.FormProgram)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (record == null) return NotFound();
+
+            _db.ExportRecords.Remove(record);
+            await _db.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         [HttpGet("{id}/download-dxfs")]
         public async Task<IActionResult> DownloadAllDxfs(int id)
         {

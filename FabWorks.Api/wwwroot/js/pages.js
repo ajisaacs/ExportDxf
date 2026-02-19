@@ -29,87 +29,34 @@ const pages = {
                 return;
             }
 
-            // Deduplicate: keep only the latest export per drawing number
-            const seen = new Set();
-            const unique = data.items.filter(e => {
-                const dn = e.drawingNumber || '';
-                if (seen.has(dn)) return false;
-                seen.add(dn);
-                return true;
-            });
+            setPage('Exports', `${data.items.length} exports`);
 
-            // Group by equipment number (first token of drawing number)
-            const groups = new Map();
-            unique.forEach(e => {
-                const dn = e.drawingNumber || '';
-                const spaceIdx = dn.indexOf(' ');
-                const equip = spaceIdx > 0 ? dn.substring(0, spaceIdx) : (dn || 'Other');
-                if (!groups.has(equip)) groups.set(equip, []);
-                groups.get(equip).push(e);
-            });
-
-            // Sort equipment groups by number descending (most recent equipment first)
-            const sortedGroups = [...groups.entries()].sort((a, b) => {
-                const numA = parseInt(a[0]) || 0;
-                const numB = parseInt(b[0]) || 0;
-                return numB - numA;
-            });
-
-            const uniqueEquip = sortedGroups.length;
-            const uniqueDrawings = unique.length;
-            setPage('Exports', `${uniqueDrawings} drawings / ${uniqueEquip} equipment`);
-
-            const groupsHtml = sortedGroups.map(([equip, items], gi) => {
-                const totalBom = items.reduce((s, e) => s + e.bomItemCount, 0);
-
-                const rows = items.map((e, i) => {
-                    const dn = e.drawingNumber || '';
-                    const spaceIdx = dn.indexOf(' ');
-                    const drawingPart = spaceIdx > 0 ? dn.substring(spaceIdx + 1) : dn;
-
-                    return `
-                        <tr class="clickable" onclick="router.go('export-detail', {id: ${e.id}})" style="animation: fadeSlideIn 0.2s ease ${0.02 * i}s forwards; opacity: 0">
-                            <td style="font-family:var(--font-mono);color:var(--text-dim);font-size:13px">${e.id}</td>
-                            <td><strong>${esc(drawingPart) || '<span style="color:var(--text-dim)">\u2014</span>'}</strong></td>
-                            <td style="color:var(--text-secondary);font-size:13px">${esc(e.title) || ''}</td>
-                            <td><span class="badge badge-count">${e.bomItemCount}</span></td>
-                            <td style="color:var(--text-secondary)">${esc(e.exportedBy)}</td>
-                            <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);white-space:nowrap">${fmtDate(e.exportedAt)}</td>
-                        </tr>`;
-                }).join('');
-
-                return `
-                    <div class="equip-group animate-in" id="equip-${esc(equip)}" style="animation-delay:${0.04 * gi}s">
-                        <div class="equip-header" onclick="toggleEquipGroup('equip-${esc(equip)}')">
-                            <span class="chevron-toggle open" id="equip-${esc(equip)}-icon">${icons.chevron}</span>
-                            <span class="equip-header-number">${esc(equip)}</span>
-                            <div class="equip-header-meta">
-                                <span class="equip-header-stat"><strong>${items.length}</strong> exports</span>
-                                <span class="equip-header-stat"><strong>${totalBom}</strong> items</span>
-                            </div>
-                        </div>
-                        <div class="equip-body">
-                            <table>
-                                <thead><tr>
-                                    <th style="width:50px">#</th>
-                                    <th>Drawing</th>
-                                    <th>Title</th>
-                                    <th style="width:80px">Items</th>
-                                    <th>Exported By</th>
-                                    <th style="width:180px">Date</th>
-                                </tr></thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
-            }).join('');
+            const rows = data.items.map((e, i) => `
+                <tr class="clickable" onclick="router.go('export-detail', {id: ${e.id}})" style="animation: fadeSlideIn 0.2s ease ${0.02 * Math.min(i, 25)}s forwards; opacity: 0">
+                    <td style="font-family:var(--font-mono);color:var(--text-dim);font-size:13px">${e.id}</td>
+                    <td><strong>${esc(e.drawingNumber) || '<span style="color:var(--text-dim)">\u2014</span>'}</strong></td>
+                    <td style="color:var(--text-secondary);font-size:13px">${esc(e.title) || ''}</td>
+                    <td><span class="badge badge-count">${e.bomItemCount}</span></td>
+                    <td style="color:var(--text-secondary)">${esc(e.exportedBy)}</td>
+                    <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);white-space:nowrap">${fmtDate(e.exportedAt)}</td>
+                    <td><button class="btn btn-red btn-sm" onclick="event.stopPropagation();deleteExport(${e.id})">${icons.trash}</button></td>
+                </tr>`).join('');
 
             content.innerHTML = `
-                <div class="stats-grid">
-                    <div class="stat-card animate-in"><div class="stat-label">Drawings</div><div class="stat-value">${uniqueDrawings}</div></div>
-                    <div class="stat-card animate-in"><div class="stat-label">Equipment</div><div class="stat-value">${uniqueEquip}</div></div>
-                </div>
-                ${groupsHtml}`;
+                <div class="card animate-in">
+                    <table>
+                        <thead><tr>
+                            <th style="width:50px">#</th>
+                            <th>Drawing</th>
+                            <th>Title</th>
+                            <th style="width:80px">Items</th>
+                            <th>Exported By</th>
+                            <th style="width:180px">Date</th>
+                            <th style="width:50px"></th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
         } catch (err) {
             content.innerHTML = `<div class="empty">Error: ${esc(err.message)}</div>`;
         }
@@ -171,6 +118,7 @@ const pages = {
                         <span style="margin-left:auto;display:flex;gap:6px">
                             ${exp.pdfContentHash ? `<a class="btn btn-amber btn-sm" href="/api/filebrowser/download?hash=${encodeURIComponent(exp.pdfContentHash)}&ext=pdf&name=${encodeURIComponent((exp.drawingNumber || 'drawing') + '.pdf')}">${icons.download} PDF</a>` : ''}
                             ${dxfCount > 0 ? `<a class="btn btn-cyan btn-sm" href="/api/exports/${exp.id}/download-dxfs">${icons.download} All DXFs</a>` : ''}
+                            <button class="btn btn-red btn-sm" onclick="deleteExport(${exp.id})">${icons.trash} Delete</button>
                         </span>
                     </div>
                     ${exp.bomItems?.length ? `
@@ -193,34 +141,115 @@ const pages = {
         }
     },
 
-    async drawings() {
+    async drawings(params) {
         const actions = document.getElementById('topbar-actions');
         const content = document.getElementById('page-content');
         setPage('Drawings');
-        actions.innerHTML = '';
+
+        const searchVal = (params && params.q) || '';
+        actions.innerHTML = `
+            <div class="search-box">
+                ${icons.search}
+                <input type="text" id="drawing-search" placeholder="Search drawing, part, user..." value="${esc(searchVal)}">
+            </div>`;
+
         content.innerHTML = `<div class="loading">Loading drawings</div>`;
 
+        const searchInput = document.getElementById('drawing-search');
+        let debounce;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounce);
+            debounce = setTimeout(() => router.go('drawings', { q: searchInput.value }), 400);
+        });
+
         try {
-            const numbers = await api.get('/api/exports/drawing-numbers');
-            if (numbers.length === 0) {
+            const searchQ = searchVal ? `&search=${encodeURIComponent(searchVal)}` : '';
+            const data = await api.get(`/api/exports?take=500${searchQ}`);
+
+            if (data.items.length === 0) {
                 content.innerHTML = `<div class="empty">No drawings found.</div>`;
                 return;
             }
 
-            numbers.sort();
-            setPage('Drawings', `${numbers.length} drawings`);
+            // Deduplicate: keep only the latest export per drawing number
+            const seen = new Set();
+            const unique = data.items.filter(e => {
+                const dn = e.drawingNumber || '';
+                if (seen.has(dn)) return false;
+                seen.add(dn);
+                return true;
+            });
 
-            const cards = numbers.map((d, i) => `
-                <div class="drawing-card" onclick="router.go('drawing-detail', {id: '${encodeURIComponent(d)}'})" style="animation: fadeSlideIn 0.3s ease ${0.025 * Math.min(i, 20)}s forwards; opacity: 0">
-                    <div class="drawing-card-title">${esc(d)}</div>
-                    <div class="drawing-card-sub">Drawing</div>
-                </div>`).join('');
+            // Group by equipment number (first token of drawing number)
+            const groups = new Map();
+            unique.forEach(e => {
+                const dn = e.drawingNumber || '';
+                const spaceIdx = dn.indexOf(' ');
+                const equip = spaceIdx > 0 ? dn.substring(0, spaceIdx) : (dn || 'Other');
+                if (!groups.has(equip)) groups.set(equip, []);
+                groups.get(equip).push(e);
+            });
+
+            // Sort equipment groups by number descending (most recent equipment first)
+            const sortedGroups = [...groups.entries()].sort((a, b) => {
+                const numA = parseInt(a[0]) || 0;
+                const numB = parseInt(b[0]) || 0;
+                return numB - numA;
+            });
+
+            const uniqueEquip = sortedGroups.length;
+            const uniqueDrawings = unique.length;
+            setPage('Drawings', `${uniqueDrawings} drawings / ${uniqueEquip} equipment`);
+
+            const groupsHtml = sortedGroups.map(([equip, items], gi) => {
+                const totalBom = items.reduce((s, e) => s + e.bomItemCount, 0);
+
+                const rows = items.map((e, i) => {
+                    const dn = e.drawingNumber || '';
+                    const spaceIdx = dn.indexOf(' ');
+                    const drawingPart = spaceIdx > 0 ? dn.substring(spaceIdx + 1) : dn;
+
+                    return `
+                        <tr class="clickable" onclick="router.go('drawing-detail', {id: '${encodeURIComponent(e.drawingNumber)}'})" style="animation: fadeSlideIn 0.2s ease ${0.02 * i}s forwards; opacity: 0">
+                            <td><strong>${esc(drawingPart) || '<span style="color:var(--text-dim)">\u2014</span>'}</strong></td>
+                            <td style="color:var(--text-secondary);font-size:13px">${esc(e.title) || ''}</td>
+                            <td><span class="badge badge-count">${e.bomItemCount}</span></td>
+                            <td style="color:var(--text-secondary)">${esc(e.exportedBy)}</td>
+                            <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);white-space:nowrap">${fmtDate(e.exportedAt)}</td>
+                        </tr>`;
+                }).join('');
+
+                return `
+                    <div class="equip-group animate-in" id="equip-${esc(equip)}" style="animation-delay:${0.04 * gi}s">
+                        <div class="equip-header" onclick="toggleEquipGroup('equip-${esc(equip)}')">
+                            <span class="chevron-toggle open" id="equip-${esc(equip)}-icon">${icons.chevron}</span>
+                            <span class="equip-header-number">${esc(equip)}</span>
+                            <div class="equip-header-meta">
+                                <span class="equip-header-stat"><strong>${items.length}</strong> drawings</span>
+                                <span class="equip-header-stat"><strong>${totalBom}</strong> items</span>
+                            </div>
+                        </div>
+                        <div class="equip-body">
+                            <table>
+                                <thead><tr>
+                                    <th>Drawing</th>
+                                    <th>Title</th>
+                                    <th style="width:80px">Items</th>
+                                    <th>Exported By</th>
+                                    <th style="width:180px">Latest Export</th>
+                                </tr></thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            }).join('');
 
             content.innerHTML = `
                 <div class="stats-grid">
-                    <div class="stat-card animate-in"><div class="stat-label">Total Drawings</div><div class="stat-value">${numbers.length}</div></div>
+                    <div class="stat-card animate-in"><div class="stat-label">Drawings</div><div class="stat-value">${uniqueDrawings}</div></div>
+                    <div class="stat-card animate-in"><div class="stat-label">Equipment</div><div class="stat-value">${uniqueEquip}</div></div>
                 </div>
-                <div class="drawings-grid">${cards}</div>`;
+                ${groupsHtml}`;
         } catch (err) {
             content.innerHTML = `<div class="empty">Error: ${esc(err.message)}</div>`;
         }

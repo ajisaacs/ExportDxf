@@ -26,7 +26,7 @@ const router = {
         switch(page) {
             case 'exports': pages.exports(params); break;
             case 'export-detail': pages.exportDetail(id); break;
-            case 'drawings': pages.drawings(); break;
+            case 'drawings': pages.drawings(params); break;
             case 'drawing-detail': pages.drawingDetail(id, params); break;
             case 'files': pages.files(params); break;
             default: pages.exports(params);

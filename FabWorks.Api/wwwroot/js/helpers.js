@@ -32,5 +32,19 @@ const api = {
         const r = await fetch(url);
         if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
         return r.json();
+    },
+    async del(url) {
+        const r = await fetch(url, { method: 'DELETE' });
+        if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
     }
 };
+
+async function deleteExport(id) {
+    if (!confirm('Delete this export record? This cannot be undone.')) return;
+    try {
+        await api.del(`/api/exports/${id}`);
+        router.dispatch();
+    } catch (err) {
+        alert('Failed to delete: ' + err.message);
+    }
+}
