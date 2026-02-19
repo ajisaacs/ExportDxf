@@ -43,6 +43,11 @@ namespace ExportDXF.Services
         public string DrawingNo { get; set; }
 
         /// <summary>
+        /// Optional title/label for the export.
+        /// </summary>
+        public string Title { get; set; }
+
+        /// <summary>
         /// Selected Equipment ID for API operations (optional).
         /// </summary>
         public int? EquipmentId { get; set; }

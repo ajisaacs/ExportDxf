@@ -7,6 +7,9 @@ namespace FabWorks.Api.DTOs
     {
         public int Id { get; set; }
         public string DrawingNumber { get; set; }
+        public string Title { get; set; }
+        public string EquipmentNo { get; set; }
+        public string DrawingNo { get; set; }
         public string SourceFilePath { get; set; }
         public string OutputFolder { get; set; }
         public DateTime ExportedAt { get; set; }

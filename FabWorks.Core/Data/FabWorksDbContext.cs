@@ -20,6 +20,9 @@ namespace FabWorks.Core.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.DrawingNumber).HasMaxLength(100);
+                entity.Property(e => e.Title).HasMaxLength(200);
+                entity.Property(e => e.EquipmentNo).HasMaxLength(50);
+                entity.Property(e => e.DrawingNo).HasMaxLength(50);
                 entity.Property(e => e.SourceFilePath).HasMaxLength(500);
                 entity.Property(e => e.OutputFolder).HasMaxLength(500);
                 entity.Property(e => e.ExportedBy).HasMaxLength(100);
