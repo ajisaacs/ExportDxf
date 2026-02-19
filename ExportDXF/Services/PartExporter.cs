@@ -307,10 +307,25 @@ namespace ExportDXF.Services
             {
                 var etcher = new EtchBendLines.Etcher();
                 etcher.AddEtchLines(dxfPath);
+                FixDegreeSymbol(dxfPath);
             }
             catch (Exception)
             {
                 // Silently fail if etch lines can't be added
+            }
+        }
+
+        /// <summary>
+        /// ACadSharp misreads the UTF-8 degree symbol (C2 B0) as two ANSI_1252
+        /// characters (Â°). Fix it in the written DXF so bend notes display correctly.
+        /// </summary>
+        private static void FixDegreeSymbol(string path)
+        {
+            var text = System.IO.File.ReadAllText(path);
+            if (text.Contains("\u00C2\u00B0"))
+            {
+                text = text.Replace("\u00C2\u00B0", "\u00B0");
+                System.IO.File.WriteAllText(path, text);
             }
         }
 
