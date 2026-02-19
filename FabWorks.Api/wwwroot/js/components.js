@@ -17,7 +17,7 @@ function renderBomDetails(b) {
         if (ct.contentHash) {
             html += `<div style="margin-top:10px">
                 <a class="btn btn-cyan btn-sm" href="/api/files/blob/${encodeURIComponent(ct.contentHash)}?ext=dxf&download=true&name=${encodeURIComponent(displayName)}" onclick="event.stopPropagation()">${icons.download} Download DXF</a>
-                <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);margin-left:8px">${esc(displayName)}</span>
+                <span style="font-family:var(--font-mono);font-size:13px;color:var(--text-dim);margin-left:8px">${esc(displayName)}</span>
             </div>`;
         }
     }
@@ -35,7 +35,7 @@ function renderBomDetails(b) {
                 <div class="info-item"><span class="lbl">Upper Tools</span><span class="val">${esc(fp.upperToolNames) || '\u2014'}</span></div>
                 <div class="info-item"><span class="lbl">Lower Tools</span><span class="val">${esc(fp.lowerToolNames) || '\u2014'}</span></div>
             </div>
-            ${fp.setupNotes ? `<div style="margin-top:8px;padding:8px 12px;background:var(--amber-dim);border-radius:4px;font-size:12px;font-family:var(--font-mono);color:var(--amber)"><span class="lbl">Setup Notes</span>${esc(fp.setupNotes)}</div>` : ''}`;
+            ${fp.setupNotes ? `<div style="margin-top:8px;padding:8px 12px;background:var(--amber-dim);border-radius:4px;font-size:13px;font-family:var(--font-mono);color:var(--amber)"><span class="lbl">Setup Notes</span>${esc(fp.setupNotes)}</div>` : ''}`;
     }
 
     html += '</div>';

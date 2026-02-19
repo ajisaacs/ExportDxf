@@ -69,12 +69,12 @@ const pages = {
 
                     return `
                         <tr class="clickable" onclick="router.go('export-detail', {id: ${e.id}})" style="animation: fadeSlideIn 0.2s ease ${0.02 * i}s forwards; opacity: 0">
-                            <td style="font-family:var(--font-mono);color:var(--text-dim);font-size:11px">${e.id}</td>
+                            <td style="font-family:var(--font-mono);color:var(--text-dim);font-size:13px">${e.id}</td>
                             <td><strong>${esc(drawingPart) || '<span style="color:var(--text-dim)">\u2014</span>'}</strong></td>
-                            <td style="color:var(--text-secondary);font-size:12px">${esc(e.title) || ''}</td>
+                            <td style="color:var(--text-secondary);font-size:13px">${esc(e.title) || ''}</td>
                             <td><span class="badge badge-count">${e.bomItemCount}</span></td>
                             <td style="color:var(--text-secondary)">${esc(e.exportedBy)}</td>
-                            <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${fmtDate(e.exportedAt)}</td>
+                            <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">${fmtDate(e.exportedAt)}</td>
                         </tr>`;
                 }).join('');
 
@@ -137,7 +137,7 @@ const pages = {
                         <td style="font-family:var(--font-mono);font-weight:600;color:var(--cyan)">${esc(b.itemNo)}</td>
                         <td><strong>${esc(b.partName)}</strong></td>
                         <td style="color:var(--text-secondary)">${esc(b.description)}</td>
-                        <td><span style="font-family:var(--font-mono);font-size:12px">${esc(b.material)}</span></td>
+                        <td><span style="font-family:var(--font-mono);font-size:13px">${esc(b.material)}</span></td>
                         <td style="font-family:var(--font-mono);text-align:center">${b.qty ?? ''}</td>
                         <td style="font-family:var(--font-mono);text-align:center">${b.totalQty ?? ''}</td>
                         <td>
@@ -260,7 +260,7 @@ const pages = {
                         <td style="font-family:var(--font-mono);font-weight:600;color:var(--cyan)">${esc(b.itemNo)}</td>
                         <td><strong>${esc(b.partName)}</strong></td>
                         <td style="color:var(--text-secondary)">${esc(b.description)}</td>
-                        <td><span style="font-family:var(--font-mono);font-size:12px">${esc(b.material)}</span></td>
+                        <td><span style="font-family:var(--font-mono);font-size:13px">${esc(b.material)}</span></td>
                         <td style="font-family:var(--font-mono);text-align:center">${b.qty ?? ''}</td>
                         <td style="font-family:var(--font-mono);text-align:center">${b.totalQty ?? ''}</td>
                         <td>
@@ -317,7 +317,7 @@ const pages = {
                     ${icons.search}
                     <input type="text" id="file-search" placeholder="Search drawing number, filename..." value="${esc(searchVal)}">
                 </div>
-                <select id="file-type-filter" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 10px;color:var(--text);font-family:var(--font-body);font-size:13px;height:34px">
+                <select id="file-type-filter" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px 10px;color:var(--text);font-family:var(--font-body);font-size:14px;height:36px">
                     <option value="">All types</option>
                     <option value="dxf">DXF only</option>
                     <option value="pdf">PDF only</option>
@@ -368,9 +368,9 @@ const pages = {
                         <td><div class="file-name-cell">${ext === 'pdf' ? icons.filePdf : icons.fileDxf}<a href="/api/filebrowser/download?hash=${encodeURIComponent(f.contentHash)}&ext=${ext}&name=${encodeURIComponent(f.fileName)}">${esc(f.fileName)}</a></div></td>
                         <td><span class="badge ${ext === 'dxf' ? 'badge-cyan' : 'badge-amber'}">${ext.toUpperCase()}</span></td>
                         <td style="color:var(--text-secondary)">${esc(f.drawingNumber)}</td>
-                        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${f.thickness != null ? f.thickness.toFixed(4) + '"' : '\u2014'}</td>
-                        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${fmtDate(f.createdAt)}</td>
-                        <td style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">${esc(hashShort)}</td>
+                        <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">${f.thickness != null ? f.thickness.toFixed(4) + '"' : '\u2014'}</td>
+                        <td style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">${fmtDate(f.createdAt)}</td>
+                        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim)">${esc(hashShort)}</td>
                         <td style="white-space:nowrap">
                             <a class="btn btn-cyan btn-sm" href="/api/filebrowser/download?hash=${encodeURIComponent(f.contentHash)}&ext=${ext}&name=${encodeURIComponent(f.fileName)}">${icons.download}</a>
                         </td>
