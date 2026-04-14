@@ -1,4 +1,4 @@
-﻿using ExportDXF.Models;
+using ExportDXF.Models;
 using ExportDXF.ViewFlipDeciders;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
@@ -28,29 +28,14 @@ namespace ExportDXF.Services
         public IViewFlipDecider ViewFlipDecider { get; set; }
 
         /// <summary>
-        /// Prefix to prepend to exported filenames.
+        /// Filename template with placeholders (e.g., "4321 A01 PT{item_no:2}").
         /// </summary>
-        public string FilePrefix { get; set; }
+        public string FilenameTemplate { get; set; }
 
         /// <summary>
-        /// Equipment number from the UI (e.g., "5028").
+        /// Output folder for DXF files and Excel workbook.
         /// </summary>
-        public string Equipment { get; set; }
-
-        /// <summary>
-        /// Drawing number from the UI (e.g., "A02", "Misc").
-        /// </summary>
-        public string DrawingNo { get; set; }
-
-        /// <summary>
-        /// Optional title/label for the export.
-        /// </summary>
-        public string Title { get; set; }
-
-        /// <summary>
-        /// Selected Equipment ID for API operations (optional).
-        /// </summary>
-        public int? EquipmentId { get; set; }
+        public string OutputFolder { get; set; }
 
         /// <summary>
         /// Cancellation token for canceling the export operation.
@@ -82,8 +67,8 @@ namespace ExportDXF.Services
             get
             {
                 return Path.Combine(
-                    Application.StartupPath, 
-                    DRAWING_TEMPLATE_FOLDER, 
+                    Application.StartupPath,
+                    DRAWING_TEMPLATE_FOLDER,
                     DRAWING_TEMPLATE_FILE);
             }
         }
@@ -123,23 +108,17 @@ namespace ExportDXF.Services
 
                     if (!string.IsNullOrEmpty(title))
                     {
-                        // Close the document without saving
                         SolidWorksApp.CloseDoc(title);
                         ProgressCallback?.Invoke("Closed template drawing", LogLevel.Info, null);
                     }
                 }
 
-                // Clear the reference regardless of success/failure
                 TemplateDrawing = null;
             }
             catch (Exception ex)
             {
                 ProgressCallback?.Invoke($"Failed to close template drawing: {ex.Message}", LogLevel.Error, null);
-
-                // Still clear the reference to prevent further issues
                 TemplateDrawing = null;
-
-                // Don't throw here as this is cleanup code - log the error but continue
             }
         }
 

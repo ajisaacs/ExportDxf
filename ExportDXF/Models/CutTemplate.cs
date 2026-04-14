@@ -4,12 +4,11 @@ namespace ExportDXF.Models
 {
     public class CutTemplate
     {
-        public int Id { get; set; }
         public string DxfFilePath { get; set; } = "";
         public string ContentHash { get; set; }
         public string CutTemplateName { get; set; } = "";
+        public int Revision { get; set; } = 1;
 
-        // Sheet metal properties (moved from BomItem)
         private double? _thickness;
         public double? Thickness
         {
@@ -25,9 +24,5 @@ namespace ExportDXF.Models
             get => _defaultBendRadius;
             set => _defaultBendRadius = value.HasValue ? Math.Round(value.Value, 8) : null;
         }
-
-        // FK back to BomItem
-        public int BomItemId { get; set; }
-        public virtual BomItem BomItem { get; set; }
     }
 }
