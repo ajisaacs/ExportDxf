@@ -54,7 +54,7 @@ namespace ExportDXF.Services
 
             try
             {
-                var fileName = GetSinglePartFileName(model, context.FilePrefix);
+                var fileName = GetSinglePartFileName(model);
                 var savePath = Path.Combine(saveDirectory, fileName + ".dxf");
 
                 // Build result item with metadata
@@ -139,7 +139,7 @@ namespace ExportDXF.Services
 
             EnrichItemWithMetadata(item, model, part);
 
-            var fileName = GetItemFileName(item, context.FilePrefix);
+            var fileName = GetItemFileName(item);
             var savePath = Path.Combine(saveDirectory, fileName + ".dxf");
 
             var templateDrawing = context.GetOrCreateTemplateDrawing();
@@ -332,7 +332,7 @@ namespace ExportDXF.Services
             }
         }
 
-        private string GetSinglePartFileName(ModelDoc2 model, string prefix)
+        private string GetSinglePartFileName(ModelDoc2 model)
         {
             var title = model.GetTitle().Replace(".SLDPRT", "");
             var config = model.ConfigurationManager.ActiveConfiguration.Name;
@@ -341,17 +341,13 @@ namespace ExportDXF.Services
             return isDefaultConfig ? title : $"{title} [{config}]";
         }
 
-        private string GetItemFileName(Item item, string prefix)
+        private string GetItemFileName(Item item)
         {
             if (string.IsNullOrWhiteSpace(item.ItemNo))
-                return item.PartName;
+                return item.PartName ?? "unknown";
 
-            prefix = prefix?.Replace("\"", "''") ?? string.Empty;
             var num = item.ItemNo.PadLeft(2, '0');
-            // Expected format: {DrawingNo} PT{ItemNo}
-            return string.IsNullOrWhiteSpace(prefix)
-                ? $"PT{num}"
-                : $"{prefix} PT{num}";
+            return $"PT{num}";
         }
 
         private void LogExportFailure(Item item, ExportContext context)
