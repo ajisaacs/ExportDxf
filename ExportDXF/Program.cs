@@ -1,18 +1,12 @@
-using ExportDXF.ApiClient;
 using ExportDXF.Forms;
 using ExportDXF.Services;
 using System;
-using System.Configuration;
-using System.Net.Http;
 using System.Windows.Forms;
 
 namespace ExportDXF
 {
     static class Program
     {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
@@ -25,40 +19,32 @@ namespace ExportDXF
         }
     }
 
-    /// <summary>
-    /// Simple dependency injection container.
-    /// </summary>
     public class ServiceContainer
     {
-        private readonly string _apiBaseUrl;
-
-        public ServiceContainer()
-        {
-            _apiBaseUrl = ConfigurationManager.AppSettings["FabWorksApiUrl"] ?? "http://localhost:5206";
-        }
-
         public MainForm ResolveMainForm()
         {
             var solidWorksService = new SolidWorksService();
             var bomExtractor = new BomExtractor();
             var partExporter = new PartExporter();
             var drawingExporter = new DrawingExporter();
-
-            var httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(_apiBaseUrl),
-                Timeout = TimeSpan.FromSeconds(30)
-            };
-            var apiClient = new FabWorksApiClient(httpClient);
+            var excelExportService = new ExcelExportService();
+            var logFileService = new LogFileService();
 
             var exportService = new DxfExportService(
                 solidWorksService,
                 bomExtractor,
                 partExporter,
                 drawingExporter,
-                apiClient);
+                excelExportService,
+                logFileService);
 
-            return new MainForm(solidWorksService, exportService, apiClient);
+            var extractors = new IDrawingInfoExtractor[]
+            {
+                new EquipmentDrawingInfoExtractor(),
+                new DefaultDrawingInfoExtractor()
+            };
+
+            return new MainForm(solidWorksService, exportService, extractors);
         }
     }
 }
