@@ -245,3 +245,6 @@ ModelManifest.xml
 
 # Test documents
 TestDocs/
+
+# Superpowers specs and plans
+docs/superpowers/
