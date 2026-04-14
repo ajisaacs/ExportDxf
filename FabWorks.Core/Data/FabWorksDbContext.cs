@@ -1,32 +1,16 @@
-using ExportDXF.Models;
+using FabWorks.Core.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Configuration;
 
-namespace ExportDXF.Data
+namespace FabWorks.Core.Data
 {
-    public class ExportDxfDbContext : DbContext
+    public class FabWorksDbContext : DbContext
     {
         public DbSet<ExportRecord> ExportRecords { get; set; }
         public DbSet<BomItem> BomItems { get; set; }
         public DbSet<CutTemplate> CutTemplates { get; set; }
+        public DbSet<FormProgram> FormPrograms { get; set; }
 
-        public ExportDxfDbContext() : base()
-        {
-        }
-
-        public ExportDxfDbContext(DbContextOptions<ExportDxfDbContext> options) : base(options)
-        {
-        }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                var connectionString = ConfigurationManager.ConnectionStrings["ExportDxfDb"]?.ConnectionString
-                    ?? "Server=localhost;Database=ExportDxfDb;Trusted_Connection=True;TrustServerCertificate=True;";
-                optionsBuilder.UseSqlServer(connectionString);
-            }
-        }
+        public FabWorksDbContext(DbContextOptions<FabWorksDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -36,6 +20,9 @@ namespace ExportDXF.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.DrawingNumber).HasMaxLength(100);
+                entity.Property(e => e.Title).HasMaxLength(200);
+                entity.Property(e => e.EquipmentNo).HasMaxLength(50);
+                entity.Property(e => e.DrawingNo).HasMaxLength(50);
                 entity.Property(e => e.SourceFilePath).HasMaxLength(500);
                 entity.Property(e => e.OutputFolder).HasMaxLength(500);
                 entity.Property(e => e.ExportedBy).HasMaxLength(100);
@@ -61,13 +48,31 @@ namespace ExportDXF.Data
                       .WithOne(ct => ct.BomItem)
                       .HasForeignKey<CutTemplate>(ct => ct.BomItemId)
                       .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.FormProgram)
+                      .WithOne(fp => fp.BomItem)
+                      .HasForeignKey<FormProgram>(fp => fp.BomItemId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<CutTemplate>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.DxfFilePath).HasMaxLength(500);
                 entity.Property(e => e.CutTemplateName).HasMaxLength(100);
                 entity.Property(e => e.ContentHash).HasMaxLength(64);
+            });
+
+            modelBuilder.Entity<FormProgram>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ProgramFilePath).HasMaxLength(500);
+                entity.Property(e => e.ContentHash).HasMaxLength(64);
+                entity.Property(e => e.ProgramName).HasMaxLength(200);
+                entity.Property(e => e.MaterialType).HasMaxLength(50);
+                entity.Property(e => e.UpperToolNames).HasMaxLength(500);
+                entity.Property(e => e.LowerToolNames).HasMaxLength(500);
+                entity.Property(e => e.SetupNotes).HasMaxLength(2000);
             });
         }
     }

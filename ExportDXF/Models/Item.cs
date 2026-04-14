@@ -61,5 +61,16 @@ namespace ExportDXF.Services
         /// The SolidWorks component reference.
         /// </summary>
         public Component2 Component { get; set; }
+
+        /// <summary>
+        /// SHA256 content hash of the exported DXF (transient, not persisted).
+        /// </summary>
+        public string ContentHash { get; set; }
+
+        /// <summary>
+        /// Full path to the locally-exported DXF temp file (transient, not persisted).
+        /// Set after successful export; used for upload to the API.
+        /// </summary>
+        public string LocalTempPath { get; set; }
     }
 }
