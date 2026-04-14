@@ -1,12 +1,11 @@
-using ExportDXF.ApiClient;
 using ExportDXF.Extensions;
 using ExportDXF.Models;
 using ExportDXF.Services;
 using ExportDXF.ViewFlipDeciders;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,14 +17,13 @@ namespace ExportDXF.Forms
     {
         private readonly ISolidWorksService _solidWorksService;
         private readonly IDxfExportService _exportService;
-        private readonly IFabWorksApiClient _apiClient;
+        private readonly IDrawingInfoExtractor[] _extractors;
         private CancellationTokenSource _cancellationTokenSource;
         private readonly BindingList<LogEvent> _logEvents;
         private readonly BindingList<BomItem> _bomItems;
         private readonly BindingList<CutTemplate> _cutTemplates;
-        private List<DrawingInfo> _allDrawings;
 
-        public MainForm(ISolidWorksService solidWorksService, IDxfExportService exportService, IFabWorksApiClient apiClient)
+        public MainForm(ISolidWorksService solidWorksService, IDxfExportService exportService, IDrawingInfoExtractor[] extractors)
         {
             InitializeComponent();
             _solidWorksService = solidWorksService ??
@@ -33,17 +31,15 @@ namespace ExportDXF.Forms
             _solidWorksService.ActiveDocumentChanged += OnActiveDocumentChanged;
             _exportService = exportService ??
                 throw new ArgumentNullException(nameof(exportService));
-            _apiClient = apiClient ??
-                throw new ArgumentNullException(nameof(apiClient));
+            _extractors = extractors ??
+                throw new ArgumentNullException(nameof(extractors));
             _logEvents = new BindingList<LogEvent>();
             _bomItems = new BindingList<BomItem>();
             _cutTemplates = new BindingList<CutTemplate>();
-            _allDrawings = new List<DrawingInfo>();
             InitializeViewFlipDeciders();
             InitializeLogEventsGrid();
             InitializeBomGrid();
             InitializeCutTemplatesGrid();
-            InitializeDrawingDropdowns();
         }
 
         ~MainForm()
@@ -68,10 +64,8 @@ namespace ExportDXF.Forms
                 LogMessage("Connecting to SolidWorks, this may take a minute...");
                 await _solidWorksService.ConnectAsync();
                 _solidWorksService.ActiveDocumentChanged += OnActiveDocumentChanged;
-                LogMessage("Files will be uploaded to FabWorks API");
-                await LoadDrawingDropdownsAsync();
                 LogMessage("Ready");
-                await UpdateActiveDocumentDisplayAsync();
+                UpdateActiveDocumentDisplay();
                 runButton.Enabled = true;
             }
             catch (Exception ex)
@@ -91,7 +85,7 @@ namespace ExportDXF.Forms
                     ViewFlipDecider = d
                 })
                 .ToList();
-            // Move "Automatic" to the top if it exists
+
             var automatic = items.FirstOrDefault(i => i.Name == "Automatic");
             if (automatic != null)
             {
@@ -104,17 +98,13 @@ namespace ExportDXF.Forms
 
         private void InitializeLogEventsGrid()
         {
-            // Clear any existing columns first
             logEventsDataGrid.Columns.Clear();
-
-            // Configure grid settings
             logEventsDataGrid.AutoGenerateColumns = false;
             logEventsDataGrid.AllowUserToAddRows = false;
             logEventsDataGrid.AllowUserToDeleteRows = false;
             logEventsDataGrid.ReadOnly = true;
             logEventsDataGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
-            // Add columns
             logEventsDataGrid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = nameof(LogEvent.Time),
@@ -144,26 +134,19 @@ namespace ExportDXF.Forms
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
             });
 
-            // Add row coloring based on log level
             logEventsDataGrid.CellFormatting += LogEventsDataGrid_CellFormatting;
-
-            // Set the data source AFTER adding columns
             logEventsDataGrid.DataSource = _logEvents;
         }
 
         private void InitializeBomGrid()
         {
-            // Clear any existing columns first
             bomDataGrid.Columns.Clear();
-
-            // Configure grid settings
             bomDataGrid.AutoGenerateColumns = false;
             bomDataGrid.AllowUserToAddRows = false;
             bomDataGrid.AllowUserToDeleteRows = false;
             bomDataGrid.ReadOnly = true;
             bomDataGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
-            // Add columns
             bomDataGrid.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = nameof(BomItem.ItemNo),
@@ -213,14 +196,12 @@ namespace ExportDXF.Forms
                 Width = 120
             });
 
-            // Set the data source AFTER adding columns
             bomDataGrid.DataSource = _bomItems;
         }
 
         private void InitializeCutTemplatesGrid()
         {
             cutTemplatesDataGrid.Columns.Clear();
-
             cutTemplatesDataGrid.AutoGenerateColumns = false;
             cutTemplatesDataGrid.AllowUserToAddRows = false;
             cutTemplatesDataGrid.AllowUserToDeleteRows = false;
@@ -239,6 +220,13 @@ namespace ExportDXF.Forms
                 DataPropertyName = nameof(CutTemplate.DxfFilePath),
                 HeaderText = "DXF File",
                 Width = 250
+            });
+
+            cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = nameof(CutTemplate.Revision),
+                HeaderText = "Rev",
+                Width = 50
             });
 
             cutTemplatesDataGrid.Columns.Add(new DataGridViewTextBoxColumn
@@ -272,69 +260,6 @@ namespace ExportDXF.Forms
             cutTemplatesDataGrid.DataSource = _cutTemplates;
         }
 
-        private void InitializeDrawingDropdowns()
-        {
-            // Wire up event handler; actual data loading happens in LoadDrawingDropdownsAsync
-            equipmentBox.SelectedIndexChanged += EquipmentBox_SelectedIndexChanged;
-        }
-
-        private async Task LoadDrawingDropdownsAsync()
-        {
-            try
-            {
-                var equipmentNumbers = await _apiClient.GetEquipmentNumbersAsync();
-
-                equipmentBox.Items.Clear();
-                equipmentBox.Items.Add("");
-                foreach (var eq in equipmentNumbers)
-                {
-                    equipmentBox.Items.Add(eq);
-                }
-
-                // Clear _allDrawings — drawing list is now loaded on equipment selection
-                _allDrawings = new List<DrawingInfo>();
-                await UpdateDrawingDropdownAsync();
-            }
-            catch (Exception ex)
-            {
-                // API might not be available yet - that's OK
-                System.Diagnostics.Debug.WriteLine($"Failed to load equipment numbers from API: {ex.Message}");
-            }
-        }
-
-        private async void EquipmentBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            await UpdateDrawingDropdownAsync();
-        }
-
-        private async Task UpdateDrawingDropdownAsync()
-        {
-            var selectedEquipment = equipmentBox.SelectedItem?.ToString();
-
-            drawingNoBox.Items.Clear();
-            drawingNoBox.Items.Add("");
-
-            try
-            {
-                var drawingNumbers = await _apiClient.GetDrawingNumbersByEquipmentAsync(
-                    string.IsNullOrEmpty(selectedEquipment) ? null : selectedEquipment);
-
-                foreach (var dn in drawingNumbers)
-                {
-                    drawingNoBox.Items.Add(dn);
-                }
-            }
-            catch
-            {
-                // API might not be available
-            }
-
-            if (drawingNoBox.Items.Count > 0)
-            {
-                drawingNoBox.SelectedIndex = 0;
-            }
-        }
-
         private async void button1_Click(object sender, EventArgs e)
         {
             if (_cancellationTokenSource != null)
@@ -351,6 +276,13 @@ namespace ExportDXF.Forms
         {
             try
             {
+                var template = txtFilenameTemplate.Text.Trim();
+                if (!FilenameTemplateParser.Validate(template, out var error))
+                {
+                    MessageBox.Show(error, "Invalid Template", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 _cancellationTokenSource = new CancellationTokenSource();
                 var token = _cancellationTokenSource.Token;
                 UpdateUIForExportStart();
@@ -362,36 +294,27 @@ namespace ExportDXF.Forms
                     return;
                 }
 
-                // Use equipment/drawing values from the UI dropdowns
-                var equipment = equipmentBox.Text?.Trim();
-                var drawingNo = drawingNoBox.Text?.Trim();
-                var filePrefix = !string.IsNullOrEmpty(equipment)
-                    ? (!string.IsNullOrEmpty(drawingNo) ? $"{equipment} {drawingNo}" : equipment)
-                    : activeDoc.Title;
+                var sourceDir = Path.GetDirectoryName(activeDoc.FilePath);
+                var outputFolder = Path.Combine(sourceDir, "Templates");
 
                 var viewFlipDecider = GetSelectedViewFlipDecider();
-                var title = titleBox.Text?.Trim();
 
                 var exportContext = new ExportContext
                 {
                     ActiveDocument = activeDoc,
                     ViewFlipDecider = viewFlipDecider,
-                    FilePrefix = filePrefix,
-                    Equipment = equipment,
-                    DrawingNo = drawingNo,
-                    Title = string.IsNullOrEmpty(title) ? null : title,
-                    EquipmentId = null,
+                    FilenameTemplate = template,
+                    OutputFolder = outputFolder,
                     CancellationToken = token,
                     ProgressCallback = (msg, level, file) => LogMessage(msg, level, file),
                     BomItemCallback = AddBomItem
                 };
 
-                // Clear previous BOM items and cut templates
                 _bomItems.Clear();
                 _cutTemplates.Clear();
 
                 LogMessage($"Started at {DateTime.Now:t}");
-                LogMessage("Exporting (files will be uploaded to API)...");
+                LogMessage($"Output: {outputFolder}");
 
                 _solidWorksService.SetCommandInProgress(true);
 
@@ -432,27 +355,29 @@ namespace ExportDXF.Forms
         private void UpdateUIForExportStart()
         {
             viewFlipDeciderBox.Enabled = false;
+            txtFilenameTemplate.Enabled = false;
             runButton.Text = "Stop";
         }
 
         private void UpdateUIForExportComplete()
         {
             viewFlipDeciderBox.Enabled = true;
+            txtFilenameTemplate.Enabled = true;
             runButton.Text = "Start";
             runButton.Enabled = true;
         }
 
-        private async void OnActiveDocumentChanged(object sender, EventArgs e)
+        private void OnActiveDocumentChanged(object sender, EventArgs e)
         {
             if (InvokeRequired)
             {
-                Invoke(new Action(async () => await UpdateActiveDocumentDisplayAsync()));
+                Invoke(new Action(() => UpdateActiveDocumentDisplay()));
                 return;
             }
-            await UpdateActiveDocumentDisplayAsync();
+            UpdateActiveDocumentDisplay();
         }
 
-        private async Task UpdateActiveDocumentDisplayAsync()
+        private void UpdateActiveDocumentDisplay()
         {
             var activeDoc = _solidWorksService.GetActiveDocument();
             var docTitle = activeDoc?.Title ?? "No Document Open";
@@ -461,64 +386,15 @@ namespace ExportDXF.Forms
             if (activeDoc == null)
                 return;
 
-            // Try API first: look up the most recent export for this file path
-            DrawingInfo drawingInfo = null;
-
-            if (!string.IsNullOrEmpty(activeDoc.FilePath))
+            // Try each extractor to auto-fill the template
+            foreach (var extractor in _extractors)
             {
-                drawingInfo = await LookupDrawingInfoFromHistoryAsync(activeDoc.FilePath);
-            }
-
-            // Fall back to parsing the document title
-            if (drawingInfo == null)
-            {
-                drawingInfo = DrawingInfo.Parse(activeDoc.Title);
-            }
-
-            if (drawingInfo != null)
-            {
-                // Detach event to prevent async race when setting equipment
-                equipmentBox.SelectedIndexChanged -= EquipmentBox_SelectedIndexChanged;
-
-                if (!string.IsNullOrEmpty(drawingInfo.EquipmentNo))
+                if (extractor.TryExtract(activeDoc.Title, out var info))
                 {
-                    if (!equipmentBox.Items.Contains(drawingInfo.EquipmentNo))
-                        equipmentBox.Items.Add(drawingInfo.EquipmentNo);
-                    equipmentBox.Text = drawingInfo.EquipmentNo;
-                }
-
-                // Load drawings for the selected equipment, then set drawing number
-                await UpdateDrawingDropdownAsync();
-
-                equipmentBox.SelectedIndexChanged += EquipmentBox_SelectedIndexChanged;
-
-                if (!string.IsNullOrEmpty(drawingInfo.DrawingNo))
-                {
-                    if (!drawingNoBox.Items.Contains(drawingInfo.DrawingNo))
-                        drawingNoBox.Items.Add(drawingInfo.DrawingNo);
-                    drawingNoBox.Text = drawingInfo.DrawingNo;
+                    txtFilenameTemplate.Text = info.DefaultTemplate;
+                    return;
                 }
             }
-        }
-
-        private async Task<DrawingInfo> LookupDrawingInfoFromHistoryAsync(string filePath)
-        {
-            try
-            {
-                var dto = await _apiClient.GetExportBySourceFileAsync(filePath);
-                if (dto != null && !string.IsNullOrEmpty(dto.DrawingNumber))
-                {
-                    if (!string.IsNullOrEmpty(dto.Title))
-                        titleBox.Text = dto.Title;
-                    return DrawingInfo.Parse(dto.DrawingNumber);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to look up drawing info from API: {ex.Message}");
-            }
-
-            return null;
         }
 
         private void LogMessage(string message, LogLevel level = LogLevel.Info, string file = null)
@@ -550,7 +426,6 @@ namespace ExportDXF.Forms
 
             _logEvents.Add(logEvent);
 
-            // Auto-scroll to the last row
             if (logEventsDataGrid.Rows.Count > 0)
             {
                 logEventsDataGrid.FirstDisplayedScrollingRowIndex = logEventsDataGrid.Rows.Count - 1;

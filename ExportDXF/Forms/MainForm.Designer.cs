@@ -38,12 +38,8 @@ namespace ExportDXF.Forms
             bomDataGrid = new System.Windows.Forms.DataGridView();
             cutTemplatesTab = new System.Windows.Forms.TabPage();
             cutTemplatesDataGrid = new System.Windows.Forms.DataGridView();
-            equipmentBox = new System.Windows.Forms.ComboBox();
-            label1 = new System.Windows.Forms.Label();
-            label2 = new System.Windows.Forms.Label();
-            drawingNoBox = new System.Windows.Forms.ComboBox();
-            titleLabel = new System.Windows.Forms.Label();
-            titleBox = new System.Windows.Forms.TextBox();
+            templateLabel = new System.Windows.Forms.Label();
+            txtFilenameTemplate = new System.Windows.Forms.TextBox();
             mainTabControl.SuspendLayout();
             logEventsTab.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)logEventsDataGrid).BeginInit();
@@ -52,175 +48,137 @@ namespace ExportDXF.Forms
             cutTemplatesTab.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)cutTemplatesDataGrid).BeginInit();
             SuspendLayout();
-            // 
+            //
             // runButton
-            // 
+            //
             runButton.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
             runButton.Location = new System.Drawing.Point(508, 12);
             runButton.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             runButton.Name = "runButton";
-            runButton.Size = new System.Drawing.Size(65, 87);
+            runButton.Size = new System.Drawing.Size(65, 57);
             runButton.TabIndex = 11;
             runButton.Text = "Start";
             runButton.UseVisualStyleBackColor = true;
             runButton.Click += button1_Click;
-            // 
+            //
+            // templateLabel
+            //
+            templateLabel.AutoSize = true;
+            templateLabel.Location = new System.Drawing.Point(15, 15);
+            templateLabel.Name = "templateLabel";
+            templateLabel.Size = new System.Drawing.Size(116, 17);
+            templateLabel.TabIndex = 2;
+            templateLabel.Text = "Filename Template";
+            //
+            // txtFilenameTemplate
+            //
+            txtFilenameTemplate.Location = new System.Drawing.Point(137, 12);
+            txtFilenameTemplate.Name = "txtFilenameTemplate";
+            txtFilenameTemplate.Size = new System.Drawing.Size(365, 25);
+            txtFilenameTemplate.TabIndex = 1;
+            //
             // label3
-            // 
+            //
             label3.AutoSize = true;
-            label3.Location = new System.Drawing.Point(26, 77);
+            label3.Location = new System.Drawing.Point(26, 46);
             label3.Name = "label3";
             label3.Size = new System.Drawing.Size(105, 17);
             label3.TabIndex = 2;
             label3.Text = "View flip decider";
-            // 
+            //
             // viewFlipDeciderBox
-            // 
+            //
             viewFlipDeciderBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             viewFlipDeciderBox.FormattingEnabled = true;
-            viewFlipDeciderBox.Location = new System.Drawing.Point(137, 74);
+            viewFlipDeciderBox.Location = new System.Drawing.Point(137, 43);
             viewFlipDeciderBox.Name = "viewFlipDeciderBox";
             viewFlipDeciderBox.Size = new System.Drawing.Size(365, 25);
             viewFlipDeciderBox.TabIndex = 3;
-            // 
+            //
             // mainTabControl
-            // 
+            //
             mainTabControl.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             mainTabControl.Controls.Add(logEventsTab);
             mainTabControl.Controls.Add(bomTab);
             mainTabControl.Controls.Add(cutTemplatesTab);
-            mainTabControl.Location = new System.Drawing.Point(15, 105);
+            mainTabControl.Location = new System.Drawing.Point(15, 75);
             mainTabControl.Name = "mainTabControl";
             mainTabControl.Padding = new System.Drawing.Point(20, 5);
             mainTabControl.SelectedIndex = 0;
-            mainTabControl.Size = new System.Drawing.Size(910, 492);
+            mainTabControl.Size = new System.Drawing.Size(910, 522);
             mainTabControl.TabIndex = 12;
-            // 
+            //
             // logEventsTab
-            // 
+            //
             logEventsTab.Controls.Add(logEventsDataGrid);
             logEventsTab.Location = new System.Drawing.Point(4, 30);
             logEventsTab.Name = "logEventsTab";
             logEventsTab.Padding = new System.Windows.Forms.Padding(3);
-            logEventsTab.Size = new System.Drawing.Size(902, 458);
+            logEventsTab.Size = new System.Drawing.Size(902, 488);
             logEventsTab.TabIndex = 0;
             logEventsTab.Text = "Log Events";
             logEventsTab.UseVisualStyleBackColor = true;
-            // 
+            //
             // logEventsDataGrid
-            // 
+            //
             logEventsDataGrid.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             logEventsDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             logEventsDataGrid.GridColor = System.Drawing.Color.WhiteSmoke;
             logEventsDataGrid.Location = new System.Drawing.Point(6, 6);
             logEventsDataGrid.Name = "logEventsDataGrid";
-            logEventsDataGrid.Size = new System.Drawing.Size(890, 440);
+            logEventsDataGrid.Size = new System.Drawing.Size(890, 476);
             logEventsDataGrid.TabIndex = 0;
-            // 
+            //
             // bomTab
-            // 
+            //
             bomTab.Controls.Add(bomDataGrid);
             bomTab.Location = new System.Drawing.Point(4, 28);
             bomTab.Name = "bomTab";
             bomTab.Padding = new System.Windows.Forms.Padding(3);
-            bomTab.Size = new System.Drawing.Size(902, 409);
+            bomTab.Size = new System.Drawing.Size(902, 490);
             bomTab.TabIndex = 1;
             bomTab.Text = "Bill Of Materials";
             bomTab.UseVisualStyleBackColor = true;
-            // 
+            //
             // bomDataGrid
-            // 
+            //
             bomDataGrid.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             bomDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             bomDataGrid.GridColor = System.Drawing.Color.WhiteSmoke;
             bomDataGrid.Location = new System.Drawing.Point(6, 6);
             bomDataGrid.Name = "bomDataGrid";
-            bomDataGrid.Size = new System.Drawing.Size(1281, 644);
+            bomDataGrid.Size = new System.Drawing.Size(890, 478);
             bomDataGrid.TabIndex = 1;
-            // 
+            //
             // cutTemplatesTab
-            // 
+            //
             cutTemplatesTab.Controls.Add(cutTemplatesDataGrid);
             cutTemplatesTab.Location = new System.Drawing.Point(4, 28);
             cutTemplatesTab.Name = "cutTemplatesTab";
             cutTemplatesTab.Padding = new System.Windows.Forms.Padding(3);
-            cutTemplatesTab.Size = new System.Drawing.Size(902, 409);
+            cutTemplatesTab.Size = new System.Drawing.Size(902, 490);
             cutTemplatesTab.TabIndex = 2;
             cutTemplatesTab.Text = "Cut Templates";
             cutTemplatesTab.UseVisualStyleBackColor = true;
-            // 
+            //
             // cutTemplatesDataGrid
-            // 
+            //
             cutTemplatesDataGrid.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             cutTemplatesDataGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             cutTemplatesDataGrid.GridColor = System.Drawing.Color.WhiteSmoke;
             cutTemplatesDataGrid.Location = new System.Drawing.Point(6, 6);
             cutTemplatesDataGrid.Name = "cutTemplatesDataGrid";
-            cutTemplatesDataGrid.Size = new System.Drawing.Size(1281, 644);
+            cutTemplatesDataGrid.Size = new System.Drawing.Size(890, 478);
             cutTemplatesDataGrid.TabIndex = 2;
-            // 
-            // equipmentBox
-            // 
-            equipmentBox.FormattingEnabled = true;
-            equipmentBox.Location = new System.Drawing.Point(137, 12);
-            equipmentBox.Name = "equipmentBox";
-            equipmentBox.Size = new System.Drawing.Size(166, 25);
-            equipmentBox.TabIndex = 13;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new System.Drawing.Point(61, 15);
-            label1.Name = "label1";
-            label1.Size = new System.Drawing.Size(70, 17);
-            label1.TabIndex = 2;
-            label1.Text = "Equipment";
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new System.Drawing.Point(321, 15);
-            label2.Name = "label2";
-            label2.Size = new System.Drawing.Size(56, 17);
-            label2.TabIndex = 2;
-            label2.Text = "Drawing";
-            // 
-            // drawingNoBox
-            // 
-            drawingNoBox.FormattingEnabled = true;
-            drawingNoBox.Location = new System.Drawing.Point(383, 12);
-            drawingNoBox.Name = "drawingNoBox";
-            drawingNoBox.Size = new System.Drawing.Size(119, 25);
-            drawingNoBox.TabIndex = 13;
-            // 
-            // titleLabel
-            // 
-            titleLabel.AutoSize = true;
-            titleLabel.Location = new System.Drawing.Point(99, 46);
-            titleLabel.Name = "titleLabel";
-            titleLabel.Size = new System.Drawing.Size(32, 17);
-            titleLabel.TabIndex = 14;
-            titleLabel.Text = "Title";
-            // 
-            // titleBox
-            // 
-            titleBox.Location = new System.Drawing.Point(137, 43);
-            titleBox.Name = "titleBox";
-            titleBox.Size = new System.Drawing.Size(365, 25);
-            titleBox.TabIndex = 15;
-            // 
+            //
             // MainForm
-            // 
+            //
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             ClientSize = new System.Drawing.Size(937, 609);
-            Controls.Add(titleBox);
-            Controls.Add(titleLabel);
-            Controls.Add(drawingNoBox);
-            Controls.Add(equipmentBox);
+            Controls.Add(txtFilenameTemplate);
             Controls.Add(mainTabControl);
             Controls.Add(viewFlipDeciderBox);
-            Controls.Add(label2);
-            Controls.Add(label1);
+            Controls.Add(templateLabel);
             Controls.Add(label3);
             Controls.Add(runButton);
             Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
@@ -253,11 +211,7 @@ namespace ExportDXF.Forms
         private System.Windows.Forms.DataGridView bomDataGrid;
         private System.Windows.Forms.TabPage cutTemplatesTab;
         private System.Windows.Forms.DataGridView cutTemplatesDataGrid;
-        private System.Windows.Forms.ComboBox equipmentBox;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.ComboBox drawingNoBox;
-        private System.Windows.Forms.Label titleLabel;
-        private System.Windows.Forms.TextBox titleBox;
+        private System.Windows.Forms.Label templateLabel;
+        private System.Windows.Forms.TextBox txtFilenameTemplate;
     }
 }
